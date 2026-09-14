@@ -3,6 +3,7 @@ import { IsEnum, IsString } from "class-validator";
 import { UserRole, UserStatus } from "../utils/user.types";
 
 export class BaseUserDto {
+  id: string;
   @ApiProperty()
   @IsString()
   username: string;

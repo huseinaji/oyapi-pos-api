@@ -1,14 +1,18 @@
-import { Controller, Get, Body, Patch, Param, Delete, Res, Response, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, Res, Response, HttpCode, HttpStatus, UseGuards, Req, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiResponse } from '@nestjs/swagger';
+import { QueryUserDto } from './dto/query-user.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
-@Controller({path: 'users', version: '1'})
+@Controller({ path: 'users', version: '1' })
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  findAll(
+    @Query() query: QueryUserDto,
+    @Query() pagination: PaginationDto = new PaginationDto
+  ) {
+    return this.userService.findAll(query, pagination);
   }
 
   @Get(':id')
@@ -18,7 +22,7 @@ export class UserController {
 
   @Patch(':id')
   async update(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
     const result = await this.userService.update(id, updateUserDto);

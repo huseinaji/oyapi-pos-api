@@ -1,4 +1,4 @@
-import { IntersectionType, PickType } from "@nestjs/mapped-types";
+import { PickType } from "@nestjs/mapped-types";
 import { BaseUserDto } from "./base-user.dto";
 
 const mandatoryFields = [
@@ -6,4 +6,4 @@ const mandatoryFields = [
   'email',
   'password'
 ] as const
-export class CreateUserDto extends PickType(BaseUserDto, mandatoryFields) {}
+export class CreateUserDto extends PickType(BaseUserDto, mandatoryFields) { }

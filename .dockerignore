@@ -1,0 +1,40 @@
+# Dependencies & build output
+node_modules
+dist
+coverage
+.nyc_output
+
+# Version control
+.git
+.gitignore
+
+# Docker files (tidak perlu ikut ke dalam image)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Environment files (JANGAN pernah ikut ke image — berisi secret)
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.vscode
+.idea
+.DS_Store
+
+# Logs
+npm-debug.log*
+*.log
+
+# Uploaded/user-generated files (harus pakai volume, bukan di-bake ke image)
+uploads
+
+# Docs
+README.md
+*.md
+
+# Tests
+test
+*.spec.ts
+*.test.ts
