@@ -7,7 +7,10 @@ export class BaseSalesInvoiceDto {
   id: string;
   @ApiProperty()
   @IsString()
-  userId: string;
+  storeId: string;
+  @ApiProperty()
+  @IsString()
+  posSessionId: string;
   @ApiProperty()
   @IsString()
   customer: string;

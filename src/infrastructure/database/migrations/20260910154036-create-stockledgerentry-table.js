@@ -1,30 +1,26 @@
 'use strict';
 
+const { SequelizeHealthIndicator } = require('@nestjs/terminus');
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    /**
-     * Add altering commands here.
-     *
-     * Example:
-     * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
-     */
     await queryInterface.createTable('stock_ledger_entries', {
       id: {
         type: Sequelize.STRING(26),
         primaryKey: true,
         allowNull: false,
       },
-      // store_id: {
-      //   type: Sequelize.STRING(26),
-      //   allowNull: false,
-      //   references: {
-      //     model: 'stores',
-      //     key: 'id'
-      //   },
-      //   onUpdate: 'CASCADE',
-      //   onDelete: 'CASCADE'
-      // },
+      store_id: {
+        type: Sequelize.STRING(26),
+        allowNull: false,
+        references: {
+          model: 'stores',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
       item_id: {
         type: Sequelize.STRING(26),
         references: {
@@ -35,7 +31,7 @@ module.exports = {
         onDelete: 'CASCADE',
       },
       qty: {
-        type: Sequelize.INTEGER.UNSIGNED,
+        type: Sequelize.INTEGER,
         defaultValue: 0,
         allowNull: false,
       },
@@ -52,6 +48,17 @@ module.exports = {
         type: Sequelize.STRING,
         defaultValue: 'active',
       },
+      reference: {
+        type: Sequelize.STRING,
+        defaultValue: 'sales_invoice'
+      },
+      reference_id: {
+        type: Sequelize.STRING,
+      },
+      remarks: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -62,6 +69,9 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       },
+      deleted_at: {
+        type: Sequelize.DATE
+      }
     })
   },
 

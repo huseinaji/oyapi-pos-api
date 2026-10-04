@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsPhoneNumber, IsString } from "class-validator";
+import { IsEnum, IsPhoneNumber, IsString } from "class-validator";
+import { StoreStatus } from "../utils/store.types";
 
 export class BaseStoreDto {
   @ApiProperty()
@@ -14,4 +15,7 @@ export class BaseStoreDto {
   @ApiProperty()
   @IsPhoneNumber()
   phone: string;
+  @ApiProperty()
+  @IsEnum(StoreStatus)
+  status: StoreStatus;
 }

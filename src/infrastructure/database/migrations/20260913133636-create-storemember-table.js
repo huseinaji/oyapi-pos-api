@@ -40,6 +40,10 @@ module.exports = {
         allowNull: false,
         defaultValue: 'cashier',
       },
+      is_default: {
+        type: Sequelize.BOOLEAN,
+        allowNull: true,
+      },
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -51,6 +55,14 @@ module.exports = {
         defaultValue: Sequelize.NOW
       },
     })
+
+    await queryInterface.addIndex('store_members',
+      ['store_id', 'user_id', 'is_default'],
+      {
+        type: 'UNIQUE',
+        name: 'unq_store_user_isdefault'
+      }
+    )
   },
 
   async down(queryInterface, Sequelize) {

@@ -1,16 +1,20 @@
-import { Controller, Get, Body, Patch, Param, Delete, Res, Response, HttpCode, HttpStatus, UseGuards, Req, Query } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, Query, Headers } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { Roles, SessionFree } from '../../common/decorator/decorator';
+import { UserRole } from './utils/user.types';
 
+@SessionFree()
+@Roles(UserRole.ADMIN)
 @Controller({ path: 'users', version: '1' })
 export class UserController {
   constructor(private readonly userService: UserService) { }
   @Get()
   findAll(
     @Query() query: QueryUserDto,
-    @Query() pagination: PaginationDto = new PaginationDto
+    @Query() pagination: PaginationDto = new PaginationDto,
   ) {
     return this.userService.findAll(query, pagination);
   }

@@ -1,7 +1,7 @@
-import { BeforeCreate, BeforeDestroy, BeforeUpdate, Column, DataType, Table } from 'sequelize-typescript';
+import { BeforeCreate, BeforeDestroy, BeforeUpdate, Column, DataType, HasMany, Table } from 'sequelize-typescript';
 import { BaseModel } from '../../../common/base/base-model';
 import { UserRole, UserStatus } from '../utils/user.types';
-import * as bcrypt from 'bcrypt';
+import { StoreMember } from '../../store/entities/store-member.entity';
 
 @Table({
   timestamps: true,
@@ -31,6 +31,14 @@ export class User extends BaseModel {
   })
   declare status: UserStatus;
 
+  @Column({
+    type: DataType.DATE,
+  })
+  declare lastLogin: string;
+
+  @HasMany(() => StoreMember)
+  declare storeMmebers: StoreMember[]
+
   @BeforeDestroy
   static async setStatusInactive(instance: User) {
     await instance.update({ status: UserStatus.INACTIVE })
@@ -43,9 +51,10 @@ export class User extends BaseModel {
       return;
     }
 
-    instance.password = await bcrypt.hash(
-      instance.password,
-      12,
-    );
+    instance.password = await Bun.password.hash(instance.password, {
+      algorithm: "argon2id",
+      memoryCost: 8, // memory usage in kibibytes (minimum 8)
+      timeCost: 3,
+    })
   }
 }

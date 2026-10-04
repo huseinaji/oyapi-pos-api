@@ -3,37 +3,31 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    /**
-     * Add altering commands here.
-     *
-     * Example:
-     * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
-     */
     await queryInterface.createTable('sales_invoices', {
       id: {
         type: Sequelize.STRING(26),
         primaryKey: true,
         allowNull: false,
       },
-      // store_id: {
-      //   type: Sequelize.STRING(26),
-      //   allowNull: false,
-      //   references: {
-      //     model: 'stores',
-      //     key: 'id'
-      //   },
-      //   onUpdate: 'CASCADE',
-      //   onDelete: 'CASCADE'
-      // },
-      user_id: {
+      store_id: {
         type: Sequelize.STRING(26),
         allowNull: false,
         references: {
-          model: 'users',
+          model: 'stores',
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
+      },
+      pos_session_id: {
+        type: Sequelize.STRING(26),
+        allowNull: true,
+        references: {
+          model: 'pos_session_entries',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
       customer: {
         type: Sequelize.STRING,
@@ -88,12 +82,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    /**
-     * Add reverting commands here.
-     *
-     * Example:
-     * await queryInterface.dropTable('users');
-     */
     await queryInterface.dropTable('sales_invoices');
   }
 };

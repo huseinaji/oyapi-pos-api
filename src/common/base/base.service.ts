@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { FindOptions, Transaction, UniqueConstraintError } from 'sequelize';
 import { PaginationDto } from '../dto/pagination.dto';
-import { accessTokenPayload } from '../../modules/auth/utils/auth.type';
+import { UserAuthPayload } from '../../modules/auth/utils/auth.type';
 
 export interface TxOptions {
   transaction: Transaction
@@ -15,27 +15,27 @@ export interface TxOptions {
 export interface UpdateOptions<TDto = any> {
   id: string;
   updateDto: TDto;
-  user?: accessTokenPayload;
+  user?: UserAuthPayload;
 }
 
 export interface CreateOptions<TDto = any> {
   createDto: TDto;
-  user?: accessTokenPayload;
+  user?: UserAuthPayload;
 }
 
 export interface FindOneOptions {
   id: string;
-  user?: accessTokenPayload;
+  user?: UserAuthPayload;
 }
 
 export interface FindAllOptions<TDto = any> {
   queryDto: TDto;
-  user?: accessTokenPayload;
+  user?: UserAuthPayload;
 }
 
 export interface RemoveOptions {
   id: string;
-  user?: accessTokenPayload;
+  user?: UserAuthPayload;
 }
 
 export abstract class BaseService<

@@ -1,20 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { accessTokenPayload } from '../../auth/utils/auth.type';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { UserAuthPayload } from '../../auth/utils/auth.type';
 import { CreatePOSTransactionDto } from '../dto/create-transaction.dto';
 import { SalesInvoiceService } from './sales-invoice.service';
 import { Sequelize } from 'sequelize-typescript';
 import { SalesInvoiceItemService } from './sales-invoice-item.service';
 import { SalesInvoiceItem } from '../entities/sales-invoice-item.entity';
-import { StockLedgerEntryService } from '../../inventory/services/stock-ledger-entry.service';
-import { LedgerDirection } from '../../inventory/utils/stock-ledger-entry.type';
-import { TxOptions } from '../../../common/base/base.service';
+import { PosSessionEntryService } from './pos-session-entry.service';
 
 @Injectable()
 export class PointOfsaleService {
   constructor(
     private readonly salesInvoiceService: SalesInvoiceService,
     private readonly salesInvoiceItemService: SalesInvoiceItemService,
-    private readonly stockLedgerEntryService: StockLedgerEntryService,
+    private readonly posSessionEntryService: PosSessionEntryService,
     private sequelize: Sequelize,
   ) { }
 
@@ -25,53 +23,53 @@ export class PointOfsaleService {
 
   async createTransaction(
     data: CreatePOSTransactionDto,
-    user: accessTokenPayload,
+    user: UserAuthPayload,
   ) {
+    const { items, ...dto } = data;
+
     return this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
-
       const invoice = await this.salesInvoiceService.create(
         {
           createDto: {
-            paymentMethod: data.paymentMethod,
-            userId: user.sub,
-            customer: data.customer,
+            ...dto,
           },
           user,
         },
         tx,
       );
 
+      const currentSession = await this.posSessionEntryService.getSessionByStore(data.storeId);
+
+      if (!currentSession) throw new BadRequestException('There is no session available');
+
       const invoiceItems = await this.salesInvoiceItemService.generateFromSI(
         invoice.id,
-        data.items,
+        items,
+        data.posSessionId,
         tx,
       );
 
       invoice.totalAmount = this.calculateTotalAmount(invoiceItems);
       await invoice.save(tx);
 
-      await this.createStockLedger(invoiceItems, tx);
-
       return invoice;
     });
   }
 
-  async createStockLedger(invoiceItems: SalesInvoiceItem[], options?: TxOptions) {
-    await Promise.all(
-      invoiceItems.map(async item => {
-        await this.stockLedgerEntryService.create({
-          createDto: {
-            itemId: item.itemId,
-            qty: item.qty,
-            ledgerDirection: LedgerDirection.OUT
-          }
-        }, options);
-      })
-    )
+  async findByInvoice(invoiceId: string, user: UserAuthPayload) {
+    await this.salesInvoiceService.findOne({ id: invoiceId, user });
   }
 
-  async findByInvoice(invoiceId: string, user: accessTokenPayload) {
-    await this.salesInvoiceService.findOne({ id: invoiceId, user });
+  async removeTransaction(siId: string, user: UserAuthPayload) {
+    return this.sequelize.transaction(async (t) => {
+      const tx = { transaction: t };
+
+      const invoice = await this.salesInvoiceService.findOne({ id: siId }, tx);
+
+      invoice.deletedAt = Date.now();
+      invoice.updatedBy = user.sub;
+      await invoice.save(tx);
+    });
   }
 }

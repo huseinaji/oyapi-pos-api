@@ -9,3 +9,8 @@ export abstract class BaseModel extends Model {
   })
   declare id: string;
 }
+
+export interface AuditableCreatorModel {
+  createdBy: string;
+  updatedBy: string;
+}

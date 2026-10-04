@@ -8,4 +8,9 @@ export enum SalesInvoiceStatus {
   COMPLETED = 'compeleted',
 }
 
+export enum PosSessionEntryStatus {
+  ACTIVE = 'active',
+  CLOSED = 'closed',
+}
+
 export const InvoicePrefix = 'INV';

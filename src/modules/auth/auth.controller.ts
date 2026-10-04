@@ -1,55 +1,44 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, Session } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
-import { Public } from '../../common/decorator/decorator';
-import { accessTokenPayload } from './utils/auth.type';
+import { Public, SessionFree } from '../../common/decorator/decorator';
+import { RedisSessionData, UserAuthPayload } from './utils/auth.type';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import '@fastify/session';
-import { CsrfService } from './csrf.service';
+import { CacheService } from '../../infrastructure/redis-provider/redis-cache.service';
+import { type FastifySessionObject } from '@fastify/session';
 
-declare module 'fastify' {
-  interface Session {
-    payload: accessTokenPayload;
-    rememberMe: boolean;
-    csrfToken: string;
-  }
-}
-
+@SessionFree()
 @Controller({ path: 'auth', version: "1" })
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly csrfService: CsrfService,
+    private cacheService: CacheService,
   ) { }
-
-  @Public()
-  @Get('csrf')
-  getCsrfToken(@Req() req: FastifyRequest) {
-    if (!req.session.csrfToken) {
-      req.session.csrfToken =
-        this.csrfService.generateToken();
-    }
-
-    return {
-      csrfToken: req.session.csrfToken,
-    };
-  }
 
   @Public()
   @Post('login')
   async login(
     @Body() data: LoginDto,
-    @Req() req: FastifyRequest,
+    @Session() session: FastifySessionObject,
   ) {
-    const payload = await this.authService.login(data);
+    const payload: UserAuthPayload = await this.authService.login(data);
 
-    req.session.payload = payload;
-    req.session.rememberMe = data.rememberMe;
+    session.payload = {
+      userPayload: payload,
+      rememberMe: data.rememberMe,
+    }
+
+    const redisSessionData: RedisSessionData = {
+      sessionId: session.sessionId,
+      ...session.payload,
+    }
+
+    this.cacheService.set(`user:${payload.sub}:session`, JSON.stringify(redisSessionData));
 
     if (data.rememberMe) {
-      req.session.cookie.maxAge =
-        30 * 24 * 60 * 60 * 1000;
+      session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
     }
 
     return {
@@ -65,7 +54,7 @@ export class AuthController {
 
   @Get('me')
   profile(@Req() req: FastifyRequest) {
-    return req.user;
+    return req['user'];
   }
 
   @Post('logout')

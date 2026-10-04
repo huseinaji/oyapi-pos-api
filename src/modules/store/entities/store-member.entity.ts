@@ -24,10 +24,20 @@ export class StoreMember extends BaseModel {
   })
   declare userId: string;
 
+  @BelongsTo(() => User)
+  declare user: User;
+
   @Column({
     type: DataType.STRING(26),
     allowNull: false,
     defaultValue: StoreRole.CASHIER,
   })
-  role: StoreRole;
+  declare role: StoreRole;
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: true,
+    defaultValue: null,
+  })
+  declare isDefault: true | null;
 }

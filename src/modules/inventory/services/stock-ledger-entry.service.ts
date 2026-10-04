@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { StockLedgerEntry } from "../entities/stock-ledger-entry.entity";
-import { BaseService, CreateOptions, TxOptions } from "../../../common/base/base.service";
+import { BaseService, CreateOptions, FindAllOptions, TxOptions } from "../../../common/base/base.service";
 import { InjectModel } from "@nestjs/sequelize";
-import { CreateStockLedgerEntryDto } from "../dto/create-stockledgerentry.dto";
-import { LedgerDirection, StockLedgerEntryStatus } from "../utils/stock-ledger-entry.type";
+import { LedgerDirection, StockLedgerEntryStatus } from "../utils/types/stock-ledger-entry.type";
 import { BinService } from "./bin.service";
+import { CreateStockLedgerEntryDto } from "../dto/stock-ledger-entry/create-stockledgerentry.dto";
+import { PaginationDto } from "../../../common/dto/pagination.dto";
+import { GET_ITEM_INCLUDE } from "../utils/includes/item.include";
 
 @Injectable()
 export class StockLedgerEntryService extends BaseService<StockLedgerEntry> {
@@ -39,12 +41,25 @@ export class StockLedgerEntryService extends BaseService<StockLedgerEntry> {
       balanceAfter,
     }, options);
 
-    await this.binService.updateOrCreateBin(
-      dto.itemId,
-      balanceAfter,
-      options
-    );
+    await this.binService.updateOrCreateBin({
+      itemId: dto.itemId,
+      qty: balanceAfter,
+      storeId: dto.storeId
+    }, options);
 
     return result;
+  }
+
+  async findAndCountAll(findAllOptions: FindAllOptions, pagination?: PaginationDto, options?: TxOptions): Promise<{ rows: StockLedgerEntry[]; count: number; }> {
+    return this.model.findAndCountAll({
+      where: {
+        ...findAllOptions.queryDto
+      },
+      include: [
+        GET_ITEM_INCLUDE(),
+      ],
+      order: [['createdAt', 'DESC']],
+      ...(pagination?.getPagination() ?? {})
+    })
   }
 }

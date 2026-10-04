@@ -12,25 +12,25 @@ import { User } from '../../user/entities/user.entity';
 import { SalesInvoiceItem } from './sales-invoice-item.entity';
 import { PaymentMethod, SalesInvoiceStatus } from '../utils/pos.type';
 import { genInvoiceId } from '../utils/sales-invoice.helper';
+import { Store } from '../../store/entities/store.entity';
+import { PosSessionEntry } from './pos-session-entry.entity';
 
 @Table({
   timestamps: true,
   paranoid: true,
 })
 export class SalesInvoice extends BaseModel {
-  // @ForeignKey(() => Store)
-  // @Column({ type: DataType.STRING(26), allowNull: false})
-  // declare storeId: string;
-  // 
-  // @BelongsTo(() => Store)
-  // declare store: Store;
+  @ForeignKey(() => Store)
+  declare storeId: string;
 
-  @ForeignKey(() => User)
-  @Column({ type: DataType.STRING(26), allowNull: false })
-  declare userId: string;
+  @BelongsTo(() => Store)
+  declare store: Store;
 
-  @BelongsTo(() => User, { as: 'user' })
-  declare user: User;
+  @ForeignKey(() => PosSessionEntry)
+  declare posSessionId: string;
+
+  @BelongsTo(() => PosSessionEntry)
+  declare posSession: PosSessionEntry;
 
   @Column({ type: DataType.STRING, unique: true })
   declare invoiceId: string;
@@ -48,14 +48,12 @@ export class SalesInvoice extends BaseModel {
   declare status: string;
 
   @ForeignKey(() => User)
-  @Column({ type: DataType.CHAR(26), allowNull: false })
   declare createdBy: string;
 
   @BelongsTo(() => User, { as: 'creator' })
   declare creator: User;
 
-  @ForeignKey(() => User)
-  @Column({ type: DataType.CHAR(26), allowNull: false })
+  @Column({ type: DataType.CHAR(26), allowNull: true })
   declare updatedBy: string;
 
   @BelongsTo(() => User, { as: 'updator' })

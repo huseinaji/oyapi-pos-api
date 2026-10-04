@@ -1,11 +1,10 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
-import { JwtService } from '@nestjs/jwt';
-import { accessTokenPayload } from './utils/auth.type';
+import { UserAuthPayload } from './utils/auth.type';
 import { LoginDto } from './dto/login.dto';
-import * as bcrypt from 'bcrypt';
 import { User } from '../user/entities/user.entity';
 import { SignupDto } from './dto/signup.dto';
+import { HandleSequelizeErrors } from '../../common/decorator/db-err-handler';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +17,7 @@ export class AuthService {
   }
 
   private async comparePassword(password: string, hash: string): Promise<boolean> {
-    return await bcrypt.compare(password, hash);
+    return await Bun.password.verify(password, hash);
   }
 
   private async validateUserLogin(dto: LoginDto): Promise<User> {
@@ -31,25 +30,24 @@ export class AuthService {
     return user
   }
 
-  async login(data: LoginDto) {
+  async login(data: LoginDto): Promise<UserAuthPayload> {
     const user = await this.validateUserLogin(data);
-    const payload: accessTokenPayload = {
+
+    await this.userService.setUserLogin(user.id);
+
+    const payload: UserAuthPayload = {
       sub: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
+      status: user.status,
     }
 
     return payload;
   }
 
+  @HandleSequelizeErrors()
   async register(data: SignupDto) {
-    const userExisting = await this.userService.findByUsernameOrEmail(data.email);
-
-    if (userExisting) {
-      throw new ConflictException('Email has been taken');
-    }
-
     return await this.userService.create({
       ...data,
     })

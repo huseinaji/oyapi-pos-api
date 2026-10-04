@@ -1,6 +1,6 @@
 import { FindAttributeOptions, IncludeOptions } from "sequelize";
 import { SalesInvoiceItem } from "../entities/sales-invoice-item.entity";
-import { GET_ITEM_INCLUDE } from "../../inventory/utils/item.include";
+import { GET_ITEM_INCLUDE } from "../../inventory/utils/includes/item.include";
 
 const SIAttributes: FindAttributeOptions = {
   exclude: [

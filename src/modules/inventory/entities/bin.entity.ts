@@ -1,4 +1,4 @@
-import { BelongsTo, Column, DataType, ForeignKey, Table } from "sequelize-typescript";
+import { BeforeCreate, BeforeUpdate, BelongsTo, Column, DataType, ForeignKey, Table } from "sequelize-typescript";
 import { BaseModel } from "../../../common/base/base-model";
 import { Item } from "./item.entity";
 import { Store } from "../../store/entities/store.entity";
@@ -7,30 +7,38 @@ import { Store } from "../../store/entities/store.entity";
   timestamps: true,
 })
 export class Bin extends BaseModel {
-  // @ForeignKey(() => Store)
-  // @Column({ type: DataType.STRING(26), allowNull: false})
-  // declare storeId: string;
-  // 
-  // @BelongsTo(() => Store)
-  // declare store: Store;
+  @ForeignKey(() => Store)
+  declare storeId: string;
+
+  @BelongsTo(() => Store)
+  declare store: Store;
 
   @ForeignKey(() => Item)
-  @Column({
-    type: DataType.CHAR(26),
-    allowNull: false,
-    unique: true,
-  })
   declare itemId: string;
 
   @BelongsTo(() => Item)
   declare item: Item;
 
   @Column({
-    type: DataType.INTEGER.UNSIGNED,
+    type: DataType.INTEGER,
     allowNull: false,
     defaultValue: 0,
   })
-  declare stockValue: number;
+  declare qty: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  })
+  declare reservedQty: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  })
+  declare actualQty: number;
 
   @Column({
     type: DataType.STRING,
@@ -38,4 +46,12 @@ export class Bin extends BaseModel {
     defaultValue: 'pcs'
   })
   declare uom: string;
+
+  @BeforeCreate
+  @BeforeUpdate
+  static calculateActualQty(instance: Bin) {
+    if (!instance.changed('qty') && !instance.changed('reservedQty')) return true;
+
+    instance.actualQty = instance.qty - instance.reservedQty;
+  }
 }

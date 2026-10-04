@@ -13,13 +13,17 @@ import { GET_SALESINVOICEITEM_INCLUDE } from '../utils/sales-invoice-item.includ
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { QuerySalesInvoiceDto } from '../dto/query-sales-invoice.dto';
 import { GET_USER_INCLUDE } from '../../user/utils/user.include';
-import { accessTokenPayload } from '../../auth/utils/auth.type';
+import { UserAuthPayload } from '../../auth/utils/auth.type';
 import { SalesInvoiceStatus } from '../utils/pos.type';
 import { UserRole } from '../../user/utils/user.types';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class SalesInvoiceService extends BaseService<SalesInvoice> {
-  constructor(@InjectModel(SalesInvoice) protected model: typeof SalesInvoice) {
+  constructor(
+    @InjectModel(SalesInvoice) protected model: typeof SalesInvoice,
+    private sequelize: Sequelize
+  ) {
     super(model);
   }
 
@@ -78,13 +82,19 @@ export class SalesInvoiceService extends BaseService<SalesInvoice> {
     });
   }
 
-  async setStatusCompleted(id: string, user: accessTokenPayload) {
+  async setStatusCompleted(id: string, user: UserAuthPayload) {
     const entity = await this.findOne({ id });
-
     if (user.role !== UserRole.ADMIN && user.sub !== entity.createdBy) {
       throw new ForbiddenException('Only creator can update this data');
     }
 
     return await entity.update({ status: SalesInvoiceStatus.COMPLETED })
+  }
+
+  async reportTransaction(query: any) {
+    return this.sequelize.query(`
+      SElECT COUNT(si.total_amount) as totalAmount,
+      FROM 'sales_invoices' si
+    `,)
   }
 }

@@ -9,24 +9,33 @@ module.exports = {
         primaryKey: true,
         allowNull: false,
       },
-      // store_id: {
-      //   type: Sequelize.STRING(26),
-      //   allowNull: false,
-      //   references: {
-      //     model: 'stores',
-      //     key: 'id'
-      //   },
-      //   onUpdate: 'CASCADE',
-      //   onDelete: 'CASCADE'
-      // },
+      store_id: {
+        type: Sequelize.STRING(26),
+        allowNull: false,
+        references: {
+          model: 'stores',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      },
       name: {
         type: Sequelize.STRING(255),
         allowNull: false,
         unique: true,
       },
-      category: {
-        type: Sequelize.STRING(255),
+      status: {
+        type: Sequelize.STRING,
         allowNull: false,
+        defaultValue: 'active'
+      },
+      type: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      category_id: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
       },
       description: {
         type: Sequelize.TEXT,

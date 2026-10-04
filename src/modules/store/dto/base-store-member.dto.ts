@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { StoreRole } from "../utils/store.types";
-import { IsEnum, IsString } from "class-validator";
+import { IsBoolean, IsEnum, IsString } from "class-validator";
+import { Type } from "class-transformer";
 
 export class BaseStoreMemberDto {
   @ApiProperty()
@@ -12,4 +13,8 @@ export class BaseStoreMemberDto {
   @ApiProperty()
   @IsEnum(StoreRole)
   role: StoreRole;
+  @ApiProperty()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isDefault: boolean;
 }

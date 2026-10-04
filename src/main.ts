@@ -1,9 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { RequestMethod, VersioningType } from '@nestjs/common/enums';
 import cookieParser from 'cookie-parser';
-import { Logger, ValidationPipe } from '@nestjs/common';
-import { GET_ENV_VARIABLE } from './common/utils/utils';
+import { Logger, RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
+import { GET_ENV_VARIABLE } from './common/utils';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Sequelize } from 'sequelize-typescript';
 import {
@@ -12,15 +11,18 @@ import {
 } from '@nestjs/platform-fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
-import fastifyCsrf from '@fastify/csrf-protection';
 import Redis from 'ioredis';
 import RedisStore from 'fastify-session-redis-store';
+
+const IS_PROD = ['staging', 'production'].includes(GET_ENV_VARIABLE('NODE_ENV'));
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
   );
+
+  app.enableCsrfProtection();
 
   const redisClient = new Redis(GET_ENV_VARIABLE('REDIS_HOST'));
   const sessionStore = new RedisStore({
@@ -32,15 +34,12 @@ async function bootstrap() {
 
   await fastify.register(fastifyCookie);
 
-  await fastify.register(fastifyCsrf);
-
   await fastify.register(fastifySession, {
     secret: GET_ENV_VARIABLE('SESSION_SECRET'),
-    cookieName: 'session',
     store: sessionStore,
     cookie: {
       httpOnly: true,
-      secure: false, // true kalau production + HTTPS
+      secure: !IS_PROD ? false : true, // true kalau production + HTTPS
       sameSite: 'strict',
       path: '/',
     },
@@ -52,6 +51,7 @@ async function bootstrap() {
       'http://localhost:3003',
       'http://192.168.1.13:3000',
       'http://192.168.1.13:3003',
+      'http://192.168.1.9:3003',
       'http://192.168.1.10'],
     methods: ['PATCH', 'GET', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
@@ -59,7 +59,7 @@ async function bootstrap() {
 
   const log = new Logger('system');
 
-  const sequelize = app.get(Sequelize);
+  console.log(typeof Bun !== 'undefined');
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -85,15 +85,7 @@ async function bootstrap() {
       }
     ]
   });
-
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Database connected successfully');
-  } catch (error) {
-    console.error('❌ Database connection failed', error);
-    process.exit(1);
-  }
-
+  
   const config = new DocumentBuilder()
     .setTitle('POS-APP API')
     .setDescription('The POS-APP API documentation')
@@ -103,7 +95,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('doc', app, document);
 
-  log.debug(`APP running on environment: ${GET_ENV_VARIABLE('NODE_ENV', 'development')} || PORT: ${GET_ENV_VARIABLE('APP_PORT')}`)
+  log.debug(`APP running on environment: ${GET_ENV_VARIABLE('NODE_ENV')} || PORT: ${GET_ENV_VARIABLE('APP_PORT')}`)
 
   await app.listen(GET_ENV_VARIABLE('APP_PORT', '3000'), '0.0.0.0');
 }

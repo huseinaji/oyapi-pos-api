@@ -33,6 +33,10 @@ module.exports = {
         allowNull: false,
         defaultValue: 'ACTIVE',
       },
+      last_login: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
