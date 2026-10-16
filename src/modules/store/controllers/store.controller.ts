@@ -31,7 +31,7 @@ import type { FastifyRequest } from 'fastify';
 export class StoreController {
   constructor(private readonly storeService: StoreService) { }
 
-  @ApiOperation({ summary: 'Create Store' })
+  @ApiOperation({ summary: 'Create a store', description: 'Creates a store using the submitted store details.' })
   @Roles(UserRole.ADMIN)
   @Post()
   create(@Req() req: Request, @Body() data: CreateStoreDto) {
@@ -39,7 +39,7 @@ export class StoreController {
     return this.storeService.create({ createDto: data, user: user.userPayload });
   }
 
-  @ApiOperation({ summary: 'Select store' })
+  @ApiOperation({ summary: 'Select a store', description: 'Selects a store for the current session and sets it as the active store.' })
   @Post(':id/select')
   async selectStore(
     @Param('id') id: string,
@@ -58,7 +58,7 @@ export class StoreController {
     };
   }
 
-  @ApiOperation({ summary: 'Assign Member' })
+  @ApiOperation({ summary: 'Assign a store member', description: 'Adds the submitted user to the store. Requires the store administrator role.' })
   @StoreAccess({
     roles: [StoreRole.ADMIN],
   })
@@ -68,7 +68,7 @@ export class StoreController {
     return this.storeService.assignMember(id, data.userId);
   }
 
-  @ApiOperation({ summary: 'Store Member' })
+  @ApiOperation({ summary: 'List store members', description: 'Returns the members assigned to the specified store.' })
   @StoreAccess({
     roles: [StoreRole.ADMIN, StoreRole.CASHIER],
   })
@@ -80,7 +80,7 @@ export class StoreController {
     return this.storeService.getMembers(id);
   }
 
-  @ApiOperation({ summary: 'Get Store by Id' })
+  @ApiOperation({ summary: 'Get a store', description: 'Returns the specified store when the current user has access to it.' })
   @StoreAccess({
     roles: [StoreRole.ADMIN, StoreRole.CASHIER],
   })
@@ -91,7 +91,7 @@ export class StoreController {
     return this.storeService.findOne({ id, user });
   }
 
-  @ApiOperation({ summary: 'Get All store' })
+  @ApiOperation({ summary: 'List stores', description: 'Returns stores matching the supplied filters and pagination settings.' })
   @Roles(UserRole.ADMIN)
   @Get()
   findAll(
@@ -106,7 +106,7 @@ export class StoreController {
     );
   }
 
-  @ApiOperation({ summary: 'Get my store' })
+  @ApiOperation({ summary: 'List my stores', description: 'Returns stores available to the authenticated user.' })
   @Get('my-store')
   getMyStore(
     @Req() req: FastifyRequest,
@@ -115,14 +115,14 @@ export class StoreController {
     return this.storeService.getMyStore(req.user.userPayload, pagination);
   }
 
-  @ApiOperation({ summary: 'Update Store' })
+  @ApiOperation({ summary: 'Update a store', description: 'Updates the specified store with the submitted fields.' })
   @StoreAccess({ roles: [StoreRole.ADMIN] })
   @UseGuards(StoreAcessRoleGuard)
   async update(@Param('id') id: string, @Body() body: UpdateStoreDto) {
     return this.storeService.update({ id, updateDto: body });
   }
 
-  @ApiOperation({ summary: 'Delete By id' })
+  @ApiOperation({ summary: 'Delete a store', description: 'Deletes the store identified by the path parameter.' })
   @Roles(UserRole.ADMIN)
   @Delete(':id')
   async delete(@Param('id') id: string) {

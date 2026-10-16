@@ -1,98 +1,156 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# POS App API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend aplikasi point of sale yang dibuat pakai NestJS, TypeScript, dan Bun. API ini memakai PostgreSQL untuk database dan Redis untuk session serta queue.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Yang dipakai
 
-## Description
+- NestJS 12 dengan Fastify
+- Sequelize untuk akses PostgreSQL
+- Sequelize CLI untuk migration
+- Redis untuk session, cache, dan queue
+- Bun untuk development, build, dan menjalankan aplikasi
+- Docker multistage untuk image production yang lebih ramping
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Sebelum mulai
 
-## Project setup
+Pastikan sudah ada:
+
+- Bun
+- PostgreSQL
+- Redis
+- Docker, kalau mau menjalankan lewat container
+
+Install dependency:
 
 ```bash
-$ npm install
+bun install
 ```
 
-## Compile and run the project
+Buat file `.env` di root project. File ini tidak ikut di-commit dan tidak masuk ke image Docker. Isi nilai sesuai environment-mu:
+
+```env
+NODE_ENV=local
+APP_PORT=3000
+DATABASE_URL=postgresql://<user>:<password>@<pooled-host>/<database>?sslmode=require
+DATABASE_URL_UNPOOLED=postgresql://<user>:<password>@<direct-host>/<database>?sslmode=require
+REDIS_HOST=redis://<host>:<port>
+SESSION_SECRET=<secret-session-yang-panjang>
+INITIAL_USER_ID=<id-user-awal>
+INITIAL_STORE_ID=<id-toko-awal>
+ADMIN_PASS=<password-admin-awal>
+```
+
+Kalau pakai Neon, dua URL ini bisa diambil dari dashboard project lewat **Connect**:
+
+- `DATABASE_URL`: pilih **Pooled connection**. Hostname biasanya punya akhiran `-pooler`. Dipakai aplikasi NestJS untuk traffic reguler; pooler Neon (PgBouncer) membantu mengelola banyak koneksi client.
+- `DATABASE_URL_UNPOOLED`: pilih **Direct connection**. Hostname tidak punya akhiran `-pooler`. Dipakai Sequelize CLI untuk migration. Migration/schema changes lebih cocok memakai koneksi direct.
+
+Ganti `<pooled-host>` dan `<direct-host>` dengan hostname lengkap yang diberikan Neon. Jangan menambahkan `-pooler` secara manual—salin URL dari Neon. Simpan kedua URL sebagai rahasia; jangan commit `.env`.
+
+Di production, isi `.env` production dengan `NODE_ENV=production` dan URL Neon untuk branch/database production. Migration config menyediakan environment `local` dan `production`; `staging` tidak dikonfigurasi di project ini. `DATABASE_URL` dipakai aplikasi dan `DATABASE_URL_UNPOOLED` dipakai migration, baik di local maupun production. Tidak perlu mengisi `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `DB_HOST`, atau `DB_PORT`.
+
+Jangan taruh credential production di repository atau di README.
+
+## Jalanin di lokal
+
+Jalankan API dalam watch mode:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+bun run start:dev
 ```
 
-## Run tests
+Build dan jalankan seperti production:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+bun run build
+bun run start:prod
 ```
 
-## Deployment
+Dokumentasi Swagger tersedia di `/doc`. Prefix API memakai `/api/` dan versioning URI, jadi endpoint versi pertama ada di bawah `/api/v1`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Database migration
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Migration Sequelize ada di `src/infrastructure/database/migrations`, dan path-nya diatur oleh `.sequelizerc`.
+
+Jalankan migration lokal:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+bun run migrate
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Rollback satu migration terakhir:
 
-## Resources
+```bash
+bun run migrate:undo
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Pastikan `NODE_ENV` sesuai konfigurasi Sequelize (`local` atau `production`) dan `DATABASE_URL_UNPOOLED` tersedia sebelum menjalankan migration.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Docker
 
-## Support
+Dockerfile punya dua target utama:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- `runtime`: aplikasi hasil compile, Bun, dependency production saja, user non-root.
+- `migration`: Sequelize CLI dan file migration/configuration saja. CLI dijalankan dengan Node.js karena Sequelize CLI tidak berjalan dengan benar di Bun.
 
-## Stay in touch
+Build image aplikasi dengan tag yang dipakai pada contoh di bawah:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+docker build --target runtime -t pos-app:latest .
+```
 
-## License
+Jalankan migration terlebih dahulu. Nilai `NODE_ENV` dibaca dari `.env`; gunakan `local` atau `production` sesuai database yang mau dipakai. Migration memakai `DATABASE_URL_UNPOOLED`:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+docker build --target migration -t pos-app:migration .
+docker run --rm --env-file .env pos-app:migration
+```
+
+Setelah migration sukses, jalankan API. Container membaca `APP_PORT` dari `.env`, jadi port setelah titik dua di `-p` harus sama dengan nilai `APP_PORT`. Misalnya kalau `.env` berisi `APP_PORT=3001`:
+
+```bash
+docker run --rm --env-file .env -p 127.0.0.1:3001:3001 pos-app:latest
+```
+
+Format mapping Docker adalah `host:container`. Jadi `127.0.0.1:3001:3001` membuat API tersedia di `http://localhost:3001` dan hanya bisa diakses dari komputer yang menjalankan Docker. Kalau mau pakai port `3001` di komputer tapi aplikasi di container mendengarkan `3000`, set `APP_PORT=3000` di `.env` lalu gunakan `-p 127.0.0.1:3001:3000`.
+
+Kalau `APP_PORT` tidak diset, aplikasi memakai port default `3000`; samakan port container di opsi `-p` dengan port tersebut.
+
+Kalau sebelumnya sudah punya image dengan tag yang sama, build ulang setelah ada perubahan Dockerfile atau kode aplikasi. Entry point hasil build NestJS di image ini adalah `dist/src/main.js`.
+
+### Pull image dari GitHub Container Registry
+
+Workflow GitHub Actions akan build dan push target `runtime` ke GHCR setiap ada push ke branch `master`. Image diberi tag `latest` dan `sha-<commit>`.
+
+```bash
+docker pull ghcr.io/<owner>/<repository>:latest
+docker run --rm --env-file .env -p 127.0.0.1:3001:3001 ghcr.io/<owner>/<repository>:latest
+```
+
+Ganti `<owner>` dan `<repository>` sesuai akun/organisasi GitHub dan nama repository-mu. Kalau package masih private, login dulu ke GHCR dengan akun GitHub yang punya akses:
+
+```bash
+docker login ghcr.io -u <username-github>
+```
+
+Saat diminta password, gunakan GitHub Personal Access Token yang punya izin `read:packages`. Workflow memakai `GITHUB_TOKEN` dengan izin `packages: write`, jadi tidak perlu menyimpan PAT sebagai repository secret untuk proses publish. Atur package menjadi public di pengaturan package GHCR kalau image perlu di-pull tanpa login.
+
+Rollback migration terakhir:
+
+```bash
+docker run --rm --env-file .env pos-app:migration db:migrate:undo
+```
+
+Urutan amannya: jalankan migration satu kali sebagai langkah deploy, lalu start container API. Jangan jalankan migration bersamaan di setiap replica aplikasi.
+
+`bun install --production` di Dockerfile beda dengan `NODE_ENV=production`: opsi Bun itu hanya menginstall `dependencies` dan melewatkan `devDependencies` untuk mengurangi ukuran image runtime. Nilai `NODE_ENV` aplikasi tetap dibaca dari file yang diberikan lewat `docker run --env-file`.
+
+Referensi Neon: [Connection pooling](https://neon.com/docs/connect/connection-pooling).
+
+## Test
+
+```bash
+bun run test
+bun run test:e2e
+bun run test:cov
+```

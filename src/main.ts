@@ -4,7 +4,6 @@ import cookieParser from 'cookie-parser';
 import { Logger, RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
 import { GET_ENV_VARIABLE } from './common/utils';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { Sequelize } from 'sequelize-typescript';
 import {
   FastifyAdapter,
   NestFastifyApplication,
@@ -13,6 +12,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
 import Redis from 'ioredis';
 import RedisStore from 'fastify-session-redis-store';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const IS_PROD = ['staging', 'production'].includes(GET_ENV_VARIABLE('NODE_ENV'));
 
@@ -40,26 +40,22 @@ async function bootstrap() {
     cookie: {
       httpOnly: true,
       secure: !IS_PROD ? false : true, // true kalau production + HTTPS
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
     },
   });
 
   app.enableCors({
     origin: [
-      'http://localhost:3000',
       'http://localhost:3003',
-      'http://192.168.1.13:3000',
-      'http://192.168.1.13:3003',
       'http://192.168.1.9:3003',
-      'http://192.168.1.10'],
+      'http://192.168.1.10'
+    ],
     methods: ['PATCH', 'GET', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
   })
 
   const log = new Logger('system');
-
-  console.log(typeof Bun !== 'undefined');
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -77,6 +73,11 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
+
+  if (IS_PROD) {
+    app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+  }
+
   app.setGlobalPrefix('api/', {
     exclude: [
       {
@@ -85,7 +86,7 @@ async function bootstrap() {
       }
     ]
   });
-  
+
   const config = new DocumentBuilder()
     .setTitle('POS-APP API')
     .setDescription('The POS-APP API documentation')

@@ -19,10 +19,10 @@ import { StoreResourceOwnershipGuard } from '../guards/store-resource-ownership/
 export class StoreInvoiceController {
   constructor(private salesInvoiceService: SalesInvoiceService) {}
 
-  @ApiOperation({ description: 'GET invoice data by id' })
+  @ApiOperation({ summary: 'Get a sales invoice', description: 'Returns the sales invoice identified by salesInvoiceId.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store that owns the invoice.',
   })
   @Get(':salesInvoiceId')
   getByInvoiceId(
@@ -35,10 +35,10 @@ export class StoreInvoiceController {
     });
   }
 
-  @ApiOperation({ description: 'GET ALL invoice data' })
+  @ApiOperation({ summary: 'List sales invoices', description: 'Returns invoices matching the supplied filters and pagination settings.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store whose invoices are requested.',
   })
   @Get()
   getAllInvoices(
@@ -51,10 +51,10 @@ export class StoreInvoiceController {
     );
   }
 
-  @ApiOperation({ summary: 'Set Status Complete' })
+  @ApiOperation({ summary: 'Complete a sales invoice', description: 'Marks the sales invoice identified by salesInvoiceId as completed.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store that owns the invoice.',
   })
   @Patch(':salesInvoiceId/complete')
   setStatusComplete(

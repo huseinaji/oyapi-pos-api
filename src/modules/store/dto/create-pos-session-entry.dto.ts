@@ -5,9 +5,11 @@ import { CreatePosSessionEntryItemDto } from "../../point-of-sale/dto/create-pos
 
 export class CreateStorePosSessionEntryDto {
   @ApiProperty({
-    required: true,
+    required: false,
     isArray: true,
-    type: CreatePosSessionEntryItemDto,
+    type: () => CreatePosSessionEntryItemDto,
+    description: 'Optional opening stock counts for items in this POS session.',
+    example: [{ itemId: '01J8Q2M6K4N7P9R3T5V0W1X2YZ', openingQty: 12 }],
   })
   @IsArray()
   @IsOptional()

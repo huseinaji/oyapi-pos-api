@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { PosSessionEntry } from '../entities/pos-session-entry.entity';
@@ -24,6 +23,7 @@ import { Item } from '../../inventory/entities/item.entity';
 import { ItemStatus, ItemType } from '../../inventory/utils/types/item.type';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { GET_ENV_VARIABLE } from '../../../common/utils';
+import { GET_USER_INCLUDE } from '../../user/utils/user.include';
 
 export type PosSessionStockRequirement = {
   itemId: string;
@@ -85,8 +85,9 @@ export class PosSessionEntryService {
       const availableQty = sessionItem.openingQty - sessionItem.soldQty;
 
       if (requirement.validateAvailable && requirement.qty > availableQty) {
+        const itemData = await this.itemService.findOne(requirement.itemId);
         throw new ConflictException(
-          `Insufficient POS session stock for item ${requirement.itemId}. Available: ${availableQty}, required: ${requirement.qty}`,
+          `Insufficient POS session stock for item ${itemData.name}. Available: ${availableQty}, required: ${requirement.qty}`,
         );
       }
 
@@ -149,27 +150,28 @@ export class PosSessionEntryService {
    * opening entry input validation 
    * return openingstock items
    * */
-  validateOpeningEntryItems(
+  async validateOpeningEntryItems(
     items: CreatePosSessionEntryItemDto[],
     availableItems: Item[],
-  ): Map<string, number> {
+  ): Promise<Map<string, number>> {
     const requestedOpeningStocks = new Map<string, number>();
 
     const availableItemIds = new Set(availableItems.map((item) => item.id));
     for (const entry of items ?? []) {
+      const itemData = await this.itemService.findOne(entry.itemId);
       if (!availableItemIds.has(entry.itemId)) {
         throw new BadRequestException(
-          `Item ${entry.itemId} is not available for pos session entry`,
+          `Item '${itemData.name}' is not available for pos session entry`,
         );
       }
       if (requestedOpeningStocks.has(entry.itemId)) {
         throw new BadRequestException(
-          `Duplicate opening stock entry for item ${entry.itemId}`,
+          `Duplicate opening stock entry for item '${itemData.name}'`,
         );
       }
       if (!Number.isInteger(entry.openingQty) || entry.openingQty < 0) {
         throw new BadRequestException(
-          `Opening stock must be a non-negative integer for item ${entry.itemId}`,
+          `Opening stock must be a non-negative integer for item '${itemData.name}'`,
         );
       }
       requestedOpeningStocks.set(entry.itemId, entry.openingQty);
@@ -193,8 +195,7 @@ export class PosSessionEntryService {
         tx,
       );
 
-      console.log(`[AVAILABLE ITEM]: `, availableItems.map(a => a.get({ plain: true })));
-      const requestedOpeningStocks = this.validateOpeningEntryItems(items, availableItems);
+      const requestedOpeningStocks = await this.validateOpeningEntryItems(items, availableItems);
 
       const entity = await this.model.create(
         {
@@ -210,7 +211,7 @@ export class PosSessionEntryService {
           ? requestedOpeningStocks.get(item.id)!
           : item.bin?.actualQty ?? 0;
 
-        if (openingQty > item.bin.actualQty) throw new ConflictException(`Insufficient stock for item ${item.id}`);
+        if (openingQty > item.bin.actualQty) throw new ConflictException(`Insufficient stock for item '${item.name}'`);
         await this.binService.updateReservedQty(item.id, openingQty, tx);
 
         openingStocks.set(item.id, openingQty);
@@ -241,6 +242,14 @@ export class PosSessionEntryService {
       include: [
         GET_STORE_INCLUDE(),
         GET_POSSESSION_ENTRY_ITEM_INCLUDE(),
+        {
+          ...GET_USER_INCLUDE(),
+          as: 'creator'
+        },
+        {
+          ...GET_USER_INCLUDE(),
+          as: 'closer'
+        }
       ],
       ...(pagination?.getPagination() ?? {}),
     });

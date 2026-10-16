@@ -23,10 +23,10 @@ import { PosSessionGuard } from '../guards/pos-session/pos-session.guard';
 export class StorePosSessionController {
   constructor(private posSessionService: PosSessionEntryService) { }
 
-  @ApiOperation({ summary: 'Create pos session' })
+  @ApiOperation({ summary: 'Open a POS session', description: 'Opens a POS session for the current store. Optional opening quantities can be supplied for items.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store for this POS session.',
   })
   @Post()
   openSession(
@@ -41,7 +41,7 @@ export class StorePosSessionController {
     );
   }
 
-  @ApiOperation({ summary: 'Create pos session' })
+  @ApiOperation({ summary: 'Get the current POS session', description: 'Returns the active POS session for the current store, if one exists.' })
   @Get('current-session')
   getCurrentSession(
     @Req() req: FastifyRequest,
@@ -49,10 +49,10 @@ export class StorePosSessionController {
     return this.posSessionService.getSessionByStore(req.storeSession.storeId);
   }
 
-  @ApiOperation({ summary: 'Get all pos session' })
+  @ApiOperation({ summary: 'List POS sessions', description: 'Returns POS sessions matching the supplied filters and pagination settings.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store whose POS sessions are requested.',
   })
   @Get()
   getAllPosSession(
@@ -62,10 +62,10 @@ export class StorePosSessionController {
     return this.posSessionService.findAndCountAll(query, pagination);
   }
 
-  @ApiOperation({ summary: 'Close pos session' })
+  @ApiOperation({ summary: 'Close the current POS session', description: 'Closes the active POS session for the current store.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store whose active POS session will be closed.',
   })
   @UseGuards(PosSessionGuard)
   @Delete()

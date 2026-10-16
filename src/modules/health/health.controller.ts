@@ -16,6 +16,7 @@ import { Public } from '../../common/decorator/decorator';
 import { SessionFree } from '../../common/decorator/decorator';
 import { RedisProviderService } from '../../infrastructure/redis-provider/redis-provider.service';
 import { Sequelize } from 'sequelize-typescript';
+import { ApiOperation } from '@nestjs/swagger';
 
 @SessionFree()
 @Controller('health')
@@ -59,6 +60,7 @@ export class HealthController implements OnModuleInit {
   }
 
   @Public()
+  @ApiOperation({ summary: 'Check service health', description: 'Reports the health of the database, Redis, disk storage, and process memory.' })
   @Get()
   @HealthCheck()
   check() {

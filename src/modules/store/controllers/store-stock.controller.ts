@@ -16,10 +16,10 @@ export class StoreStockController {
     private binService: BinService,
   ) {}
 
-  @ApiOperation({ description: 'Get all stock ledger entry' })
+  @ApiOperation({ summary: 'List stock ledger entries', description: 'Returns stock movements for the current store, with optional filters and pagination.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store whose stock movements are requested.',
   })
   @Get('stock-ledger')
   async stockEntry(
@@ -35,10 +35,10 @@ export class StoreStockController {
     );
   }
 
-  @ApiOperation({ description: 'Get all stock ledger entry' })
+  @ApiOperation({ summary: 'List store bins', description: 'Returns inventory bin balances for the current store, with optional filters and pagination.' })
   @ApiParam({
     name: 'id',
-    description: 'StoreId',
+    description: 'ID of the store whose bins are requested.',
   })
   @Get('bins')
   async getBins(

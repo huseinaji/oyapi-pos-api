@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import { PickType } from '@nestjs/swagger';
 import { BaseItemDto } from './base-item.dto';
 

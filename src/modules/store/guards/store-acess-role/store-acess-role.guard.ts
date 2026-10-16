@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { StoreService } from '../../store.service';
 import { Reflector } from '@nestjs/core';
 import { STORE_ACCESS_KEY, StoreAccessOptions } from '../../utils/decorators/store.decorator';

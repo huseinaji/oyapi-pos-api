@@ -14,6 +14,8 @@ export class CreatePOSTransactionDto extends PickType(BaseSalesInvoiceDto, [
     required: true,
     isArray: true,
     type: () => CreateSalesInvoiceItemDto,
+    description: 'Items included in the sale. Each item ID must be unique within the transaction.',
+    example: [{ itemId: '01J8Q2M6K4N7P9R3T5V0W1X2YZ', qty: 2 }],
   })
   @IsArray()
   @ValidateNested({ each: true })

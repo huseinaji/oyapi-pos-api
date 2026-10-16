@@ -25,7 +25,7 @@ import { UserRole } from '../../user/utils/user.types';
 export class ItemController {
   constructor(private readonly itemService: ItemService) { }
 
-  @ApiOperation({ description: 'Create Item' })
+  @ApiOperation({ summary: 'Create an item', description: 'Creates a catalog item from the submitted item details.' })
   @Post()
   create(@Body() data: CreateItemDto, @Req() req: FastifyRequest) {
     const user = req.user;
@@ -35,7 +35,7 @@ export class ItemController {
     }, user.userPayload);
   }
 
-  @ApiOperation({ description: 'Get All Item' })
+  @ApiOperation({ summary: 'List items', description: 'Returns items matching the supplied filters and pagination settings.' })
   @Get()
   findAll(
     @Query() query: QueryItemDto,
@@ -46,7 +46,7 @@ export class ItemController {
     }, pagination);
   }
 
-  @ApiOperation({ description: 'Get One Item by Id' })
+  @ApiOperation({ summary: 'Get an item', description: 'Returns the item identified by the path parameter.' })
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -54,13 +54,13 @@ export class ItemController {
     return this.itemService.findOne(id);
   }
 
-  @ApiOperation({ description: 'Update Item' })
+  @ApiOperation({ summary: 'Update an item', description: 'Updates the supplied fields for the item identified by the path parameter.' })
   @Patch(':id')
   update(@Param('id') id: string, @Body() data: UpdateItemDto) {
     return this.itemService.update(id, data);
   }
 
-  @ApiOperation({ description: 'Delete Item by Id' })
+  @ApiOperation({ summary: 'Delete an item', description: 'Deletes the item identified by the path parameter.' })
   @Delete(':id')
   async remove(@Param('id') id: string) {
     await this.itemService.remove(id);

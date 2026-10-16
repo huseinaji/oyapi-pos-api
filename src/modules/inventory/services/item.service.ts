@@ -190,6 +190,18 @@ export class ItemService {
     return this.validateExisting(result);
   }
 
+  findAllSellableItem() {
+    return this.model.findAll({
+      where: {
+        type: { [Op.ne]: ItemType.RAW_MATERIAL },
+        status: ItemStatus.ACTIVE,
+      },
+      include: [
+        GET_ITEMBUNDLECOMPONENT_INCLUDE()
+      ],
+    })
+  }
+
   async update(id: string, data: UpdateItemDto) {
     const currentData = await this.findOne(id);
     return await currentData.update(

@@ -1,4 +1,4 @@
-import { PickType } from "@nestjs/mapped-types";
+import { PickType } from '@nestjs/swagger';
 import { BaseUserDto } from "./base-user.dto";
 
 const mandatoryFields = [

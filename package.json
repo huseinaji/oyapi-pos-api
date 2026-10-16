@@ -1,10 +1,10 @@
 {
-  "name": "pos-app-nest",
+  "name": "oyapi-pos-api",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "POS app untuk retail umkm",
+  "author": "huseinaji",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "build": "bun run nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -46,11 +46,14 @@
     "fastify-session-redis-store": "^7.1.2",
     "ioredis": "^5.11.1",
     "mysql2": "^3.24.3",
+    "nest-winston": "^2.0.0",
     "pg": "^8.23.0",
     "rxjs": "^7.8.1",
     "sequelize": "^6.37.8",
     "sequelize-typescript": "^2.1.6",
-    "ulid": "^3.0.2"
+    "ulid": "^3.0.2",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

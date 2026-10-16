@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import { BaseUserDto } from './base-user.dto';
 import { IsEmpty, IsNotIn } from 'class-validator';
 import { UserRole } from '../utils/user.types';

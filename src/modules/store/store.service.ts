@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { BaseService, FindAllOptions, TxOptions } from '../../common/base/base.service';
-import type { CreateOptions } from '../../common/base/base.service'
+import type { CreateOptions, FindOneOptions } from '../../common/base/base.service'
 import { Store } from './entities/store.entity';
 import { InjectModel } from '@nestjs/sequelize';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -14,7 +14,7 @@ import { HandleSequelizeErrors } from '../../common/decorator/db-err-handler';
 import { GET_USER_INCLUDE } from '../user/utils/user.include';
 import { UserRole } from '../user/utils/user.types';
 import { GET_STORE_MEMBER_INCLUDE } from './utils/store-member.include';
-import { Op } from 'sequelize';
+import { FindOptions, Op } from 'sequelize';
 
 @Injectable()
 export class StoreService extends BaseService<Store> {
@@ -133,6 +133,24 @@ export class StoreService extends BaseService<Store> {
     })
   }
 
+  async findOne(findOneOptions: FindOneOptions, options?: FindOptions): Promise<Store> {
+    const result = await this.model.findOne({
+      where: { id: findOneOptions.id },
+      include: [
+        GET_USER_INCLUDE(),
+        {
+          ...GET_STORE_MEMBER_INCLUDE(),
+          where: {
+            userId: { [Op.ne]: GET_ENV_VARIABLE('INITIAL_USER_ID') }
+          }
+        }
+      ],
+      ...options,
+    })
+
+    return this.validateExisting(result);
+  }
+
   findAndCountAll(
     findAllOptions: FindAllOptions,
     pagination?: PaginationDto,
@@ -146,29 +164,13 @@ export class StoreService extends BaseService<Store> {
       order: [['createdAt', 'DESC']],
       include: [
         GET_USER_INCLUDE(),
-        GET_STORE_MEMBER_INCLUDE(),
+        {
+          ...GET_STORE_MEMBER_INCLUDE(),
+          limit: 3,
+        }
       ],
       ...(pagination?.getPagination() ?? {}),
       ...options,
     });
-  }
-
-  async createInitialStore() {
-    return await this.sequelize.transaction(async t => {
-      const tx = { transaction: t };
-
-      await this.model.create({
-        id: GET_ENV_VARIABLE('INITIAL_STORE_ID'),
-        name: 'My Store',
-        address: 'localhouse',
-        phone: '085156460160'
-      }, tx);
-
-      await this.storeMemberModel.create({
-        storeId: GET_ENV_VARIABLE('INITIAL_STORE_ID'),
-        role: StoreRole.ADMIN,
-        userId: GET_ENV_VARIABLE('INITIAL_USER_ID'),
-      }, tx)
-    })
   }
 }

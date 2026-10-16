@@ -11,6 +11,10 @@ import { DB_CONFIG } from './infrastructure/database/config/database.config';
 import { StoreModule } from './modules/store/store.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { RedisProviderModule } from './infrastructure/redis-provider/redis-provider.module';
+import { WinstonModule } from 'nest-winston';
+import { WinstonConfig } from './common/config/winston.config';
+import { HttpExceptionFilter } from './common/utils/http-exception.filter';
+import { APP_FILTER } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -22,6 +26,9 @@ import { RedisProviderModule } from './infrastructure/redis-provider/redis-provi
         url: GET_ENV_VARIABLE('REDIS_HOST'),
       },
     }),
+    WinstonModule.forRoot({
+      ...WinstonConfig
+    }),
     ScheduleModule.forRoot(),
     UserModule,
     AuthModule,
@@ -31,5 +38,11 @@ import { RedisProviderModule } from './infrastructure/redis-provider/redis-provi
     StoreModule,
     RedisProviderModule,
   ],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter
+    }
+  ]
 })
 export class AppModule { }

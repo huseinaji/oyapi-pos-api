@@ -35,7 +35,7 @@ export class CreateItemDto extends IntersectionType(
   PickType(BaseItemDto, mandatoryFields),
   PartialType(PickType(BaseItemDto, ['description', 'categoryId'])),
 ) {
-  @ApiProperty()
+  @ApiProperty({ type: Number, description: 'Starting on-hand stock. Required for regular items; not used for bundle items.', example: 25, minimum: 1, required: false })
   @IsEmpty({ validateIf: (o) => o.type === ItemType.ITEM_BUNDLE })
   @ValidateIf((o) => o.type !== ItemType.ITEM_BUNDLE)
   @IsNumber()
@@ -47,7 +47,7 @@ export class CreateItemDto extends IntersectionType(
   @Type(() => Boolean)
   isMaintainStock: boolean;
 
-  @ApiProperty({ isArray: true })
+  @ApiProperty({ type: () => CreateItemBundleComponentDto, isArray: true, description: 'Components of this item when type is a bundle. Component item IDs must be unique.', required: false })
   @ValidateIf(o => o.type === ItemType.ITEM_BUNDLE)
   @IsArray()
   @ArrayUnique(

@@ -4,16 +4,16 @@ import { IsBoolean, IsEnum, IsString } from "class-validator";
 import { Type } from "class-transformer";
 
 export class BaseStoreMemberDto {
-  @ApiProperty()
+  @ApiProperty({ type: String, description: 'ID of the store', example: '01J8Q2M6K4N7P9R3T5V0W1X2YZ' })
   @IsString()
   storeId: string;
-  @ApiProperty()
+  @ApiProperty({ type: String, description: 'ID of the member user', example: '01J8Q2M6K4N7P9R3T5V0W1X2YZ' })
   @IsString()
   userId: string;
-  @ApiProperty()
+  @ApiProperty({ enum: StoreRole, enumName: 'StoreRole', description: 'Member role within the store' })
   @IsEnum(StoreRole)
   role: StoreRole;
-  @ApiProperty()
+  @ApiProperty({ type: Boolean, description: 'Whether this is the default store for the member', example: true })
   @Type(() => Boolean)
   @IsBoolean()
   isDefault: boolean;

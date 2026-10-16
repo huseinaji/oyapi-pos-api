@@ -8,6 +8,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import '@fastify/session';
 import { CacheService } from '../../infrastructure/redis-provider/redis-cache.service';
 import { type FastifySessionObject } from '@fastify/session';
+import { ApiOperation } from '@nestjs/swagger';
 
 @SessionFree()
 @Controller({ path: 'auth', version: "1" })
@@ -18,6 +19,7 @@ export class AuthController {
   ) { }
 
   @Public()
+  @ApiOperation({ summary: 'Sign in', description: 'Authenticates with a username or email and password, then establishes the session cookie.' })
   @Post('login')
   async login(
     @Body() data: LoginDto,
@@ -47,16 +49,19 @@ export class AuthController {
   }
 
   @Public()
+  @ApiOperation({ summary: 'Register an account', description: 'Creates a user account with the submitted username, email, password, and role.' })
   @Post('register')
   register(@Body() data: SignupDto) {
     return this.authService.register(data)
   }
 
+  @ApiOperation({ summary: 'Get the current user', description: 'Returns the authenticated user and session payload.' })
   @Get('me')
   profile(@Req() req: FastifyRequest) {
     return req['user'];
   }
 
+  @ApiOperation({ summary: 'Sign out', description: 'Destroys the current authenticated session.' })
   @Post('logout')
   async logout(
     @Req() req: FastifyRequest,

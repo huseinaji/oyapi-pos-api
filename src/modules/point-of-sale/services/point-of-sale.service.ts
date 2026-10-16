@@ -6,6 +6,10 @@ import { Sequelize } from 'sequelize-typescript';
 import { SalesInvoiceItemService } from './sales-invoice-item.service';
 import { SalesInvoiceItem } from '../entities/sales-invoice-item.entity';
 import { PosSessionEntryService } from './pos-session-entry.service';
+import { ItemService } from '../../inventory/services/item.service';
+import { Item } from '../../inventory/entities/item.entity';
+import { PosSessionEntryItem } from '../entities/pos-session-entry-item.entity';
+import { PosSessionEntry } from '../entities/pos-session-entry.entity';
 
 @Injectable()
 export class PointOfsaleService {
@@ -13,6 +17,7 @@ export class PointOfsaleService {
     private readonly salesInvoiceService: SalesInvoiceService,
     private readonly salesInvoiceItemService: SalesInvoiceItemService,
     private readonly posSessionEntryService: PosSessionEntryService,
+    private readonly itemService: ItemService,
     private sequelize: Sequelize,
   ) { }
 
@@ -55,6 +60,102 @@ export class PointOfsaleService {
 
       return invoice;
     });
+  }
+
+  async findAllSellableItem(posSession: PosSessionEntry) {
+    //check store session
+    // ambil semua store session item
+    // untuk item finished good, ambil semua item finished good dan item component
+    // map dengan store session
+    // ambil finished good yang opening qty ada di store session
+    const storeSessionItem = posSession.items;
+
+    const items = await this.itemService.findAllSellableItem();
+
+    const result = this.mapSessionItemWithInventoryItem(storeSessionItem, items);
+
+    return result;
+  }
+
+  private mapSessionItemWithInventoryItem(
+    sessionItems: PosSessionEntryItem[],
+    items: Item[],
+  ) {
+    const sessionItemMap = new Map(
+      sessionItems.map((sessionItem) => [
+        sessionItem.itemId,
+        sessionItem
+      ]),
+    );
+
+    const result = items
+      .filter((item) => item.type !== 'raw_material')
+      .map((item) => {
+        item = item.get({ plain: true });
+        // Priority 1: use stock directly recorded in POS session.
+        const sessionItem = sessionItemMap.get(item.id);
+
+        if (sessionItem) {
+          const availableQty =
+            sessionItem.openingQty -
+            sessionItem.soldQty
+
+          return {
+            ...item,
+            availableQty,
+          };
+        }
+
+        // Priority 2: calculate bundle stock from its components.
+        if (item.type === 'item_bundle') {
+          const components = item.itemComponents ?? [];
+
+          if (components.length === 0) {
+            return {
+              ...item,
+              availableQty: 0,
+            };
+          }
+
+          const availableQty = Math.min(
+            ...components.map((component) => {
+              const componentSessionItem = sessionItemMap.get(
+                component.componentItemId,
+              );
+
+              const componentQty = Number(component.qty);
+
+              if (!componentSessionItem || componentQty <= 0) {
+                return 0;
+              }
+
+              const componentAvailableQty = Math.max(
+                0,
+                Number(componentSessionItem.openingQty) -
+                Number(componentSessionItem.soldQty),
+              );
+
+              return Math.floor(
+                componentAvailableQty / componentQty,
+              );
+            }),
+          );
+
+          return {
+            ...item,
+            availableQty,
+          };
+        }
+
+        // No session stock available for this item.
+        return {
+          ...item,
+          availableQty: 0,
+        };
+      });
+
+    console.log(result);
+    return result;
   }
 
   async findByInvoice(invoiceId: string, user: UserAuthPayload) {
