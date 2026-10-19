@@ -1,4 +1,3 @@
-
 import * as winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { mkdirSync } from 'node:fs';
@@ -20,34 +19,6 @@ const appOnlyFilter = winston.format((info) => {
   return info;
 });
 
-const transports: winston.transport[] = isProduction
-  ? [
-    new DailyRotateFile({
-      dirname: join(logDir, 'app'),
-      filename: 'app-%DATE%.log',
-      datePattern: 'YYYY-MM-DD',
-      maxFiles: 5,
-      zippedArchive: true,
-      format: appOnlyFilter(),
-    }),
-
-    new DailyRotateFile({
-      dirname: join(logDir, 'error'),
-      filename: 'error-%DATE%.log',
-      datePattern: 'YYYY-MM-DD',
-      level: 'error',
-      maxFiles: 5,
-      zippedArchive: true,
-    }),
-  ]
-  : [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.prettyPrint({ colorize: true }),
-      ),
-    }),
-  ];
-
 export const WinstonConfig: winston.LoggerOptions = {
   level: isProduction ? 'info' : 'debug',
   format: winston.format.combine(
@@ -55,5 +26,31 @@ export const WinstonConfig: winston.LoggerOptions = {
     winston.format.errors({ stack: true }),
     winston.format.json(),
   ),
-  transports,
+  transports: isProduction
+    ? [
+        new DailyRotateFile({
+          dirname: join(logDir, 'app'),
+          filename: 'app-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          maxFiles: 5,
+          zippedArchive: true,
+          format: appOnlyFilter(),
+        }),
+
+        new DailyRotateFile({
+          dirname: join(logDir, 'error'),
+          filename: 'error-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          level: 'error',
+          maxFiles: 5,
+          zippedArchive: true,
+        }),
+      ]
+    : [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.prettyPrint({ colorize: true }),
+          ),
+        }),
+      ],
 };

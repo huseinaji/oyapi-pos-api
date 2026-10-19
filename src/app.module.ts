@@ -14,7 +14,8 @@ import { RedisProviderModule } from './infrastructure/redis-provider/redis-provi
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfig } from './common/config/winston.config';
 import { HttpExceptionFilter } from './common/utils/http-exception.filter';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -30,6 +31,12 @@ import { APP_FILTER } from '@nestjs/core';
       ...WinstonConfig
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
     UserModule,
     AuthModule,
     PointOfSaleModule,
@@ -42,7 +49,11 @@ import { APP_FILTER } from '@nestjs/core';
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter
-    }
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ]
 })
 export class AppModule { }

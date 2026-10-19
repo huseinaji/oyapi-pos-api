@@ -1,7 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
-import { Logger, RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  Logger,
+  RequestMethod,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { GET_ENV_VARIABLE } from './common/utils';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import {
@@ -14,7 +19,18 @@ import Redis from 'ioredis';
 import RedisStore from 'fastify-session-redis-store';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
-const IS_PROD = ['staging', 'production'].includes(GET_ENV_VARIABLE('NODE_ENV'));
+const IS_PROD = GET_ENV_VARIABLE('NODE_ENV') === 'production';
+const CORS_ORIGINS = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : IS_PROD
+    ? []
+    : [
+        'http://localhost:3003',
+        'http://192.168.1.9:3003',
+        'http://192.168.1.10',
+      ];
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -46,14 +62,10 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: [
-      'http://localhost:3003',
-      'http://192.168.1.9:3003',
-      'http://192.168.1.10'
-    ],
+    origin: CORS_ORIGINS,
     methods: ['PATCH', 'GET', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
-  })
+  });
 
   const log = new Logger('system');
 
@@ -82,22 +94,27 @@ async function bootstrap() {
     exclude: [
       {
         path: '',
-        method: RequestMethod.GET
-      }
-    ]
+        method: RequestMethod.GET,
+      },
+    ],
   });
 
-  const config = new DocumentBuilder()
-    .setTitle('POS-APP API')
-    .setDescription('The POS-APP API documentation')
-    .setVersion('1.0-DEVELOPMENT')
-    .build();
+  if (!IS_PROD || GET_ENV_VARIABLE('ENABLE_SWAGGER') === 'true') {
+    const config = new DocumentBuilder()
+      .setTitle('POS-APP API')
+      .setDescription('The POS-APP API documentation')
+      .setVersion('1.0')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('doc', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('doc', app, document);
+  }
 
-  log.debug(`APP running on environment: ${GET_ENV_VARIABLE('NODE_ENV')} || PORT: ${GET_ENV_VARIABLE('APP_PORT')}`)
+  log.log(
+    `APP running on environment: ${GET_ENV_VARIABLE('NODE_ENV')} || PORT: ${GET_ENV_VARIABLE('APP_PORT', '3000')}`,
+  );
 
+  app.enableShutdownHooks();
   await app.listen(GET_ENV_VARIABLE('APP_PORT', '3000'), '0.0.0.0');
 }
 bootstrap();

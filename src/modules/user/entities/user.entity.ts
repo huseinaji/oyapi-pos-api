@@ -1,4 +1,4 @@
-import { BeforeCreate, BeforeDestroy, BeforeUpdate, Column, DataType, HasMany, Table } from 'sequelize-typescript';
+import { BeforeCreate, BeforeDestroy, BeforeUpdate, Column, DataType, DefaultScope, HasMany, Table } from 'sequelize-typescript';
 import { BaseModel } from '../../../common/base/base-model';
 import { UserRole, UserStatus } from '../utils/user.types';
 import { StoreMember } from '../../store/entities/store-member.entity';
@@ -7,6 +7,9 @@ import { StoreMember } from '../../store/entities/store-member.entity';
   timestamps: true,
   paranoid: true,
 })
+@DefaultScope(() => ({
+  attributes: { exclude: ['password'] },
+}))
 export class User extends BaseModel {
   @Column({ type: DataType.STRING, allowNull: false, unique: true })
   declare username: string;
@@ -53,7 +56,7 @@ export class User extends BaseModel {
 
     instance.password = await Bun.password.hash(instance.password, {
       algorithm: "argon2id",
-      memoryCost: 8, // memory usage in kibibytes (minimum 8)
+      memoryCost: 65_536,
       timeCost: 3,
     })
   }

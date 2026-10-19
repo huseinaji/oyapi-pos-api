@@ -9,6 +9,7 @@ import '@fastify/session';
 import { CacheService } from '../../infrastructure/redis-provider/redis-cache.service';
 import { type FastifySessionObject } from '@fastify/session';
 import { ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 @SessionFree()
 @Controller({ path: 'auth', version: "1" })
@@ -19,6 +20,7 @@ export class AuthController {
   ) { }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Sign in', description: 'Authenticates with a username or email and password, then establishes the session cookie.' })
   @Post('login')
   async login(
@@ -37,7 +39,7 @@ export class AuthController {
       ...session.payload,
     }
 
-    this.cacheService.set(`user:${payload.sub}:session`, JSON.stringify(redisSessionData));
+    await this.cacheService.set(`user:${payload.sub}:session`, JSON.stringify(redisSessionData));
 
     if (data.rememberMe) {
       session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
@@ -49,7 +51,8 @@ export class AuthController {
   }
 
   @Public()
-  @ApiOperation({ summary: 'Register an account', description: 'Creates a user account with the submitted username, email, password, and role.' })
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Register an account', description: 'Creates a standard user account with the submitted username, email, and password.' })
   @Post('register')
   register(@Body() data: SignupDto) {
     return this.authService.register(data)
@@ -69,7 +72,7 @@ export class AuthController {
   ) {
     await req.session.destroy();
 
-    res.clearCookie('sessionIdsessionId', {
+    res.clearCookie('sessionId', {
       path: '/',
     });
 

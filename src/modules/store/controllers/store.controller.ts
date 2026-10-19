@@ -32,7 +32,6 @@ export class StoreController {
   constructor(private readonly storeService: StoreService) { }
 
   @ApiOperation({ summary: 'Create a store', description: 'Creates a store using the submitted store details.' })
-  @Roles(UserRole.ADMIN)
   @Post()
   create(@Req() req: Request, @Body() data: CreateStoreDto) {
     const user = req['user'] as BaseSessionPayload;

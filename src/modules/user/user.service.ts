@@ -39,6 +39,7 @@ export class UserService implements OnModuleInit {
 
   findByUsernameOrEmail(usernameOrEmail: string): Promise<User | null> {
     return this.model.findOne({
+      attributes: { include: ['password'] },
       where: {
         [Op.or]: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
       },
@@ -65,7 +66,7 @@ export class UserService implements OnModuleInit {
   async update(id: string, data: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
     await user.update({ ...data });
-    return user;
+    return this.findOne(id);
   }
 
   setUserLogin(id: string) {

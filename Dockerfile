@@ -3,7 +3,7 @@
 FROM oven/bun:1-alpine AS dependencies
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN bun ci
 
 # Tahap 2: compile source TypeScript menjadi JavaScript di folder dist/.
 FROM dependencies AS build
@@ -16,13 +16,13 @@ RUN bun run build
 FROM oven/bun:1-alpine AS production-dependencies
 WORKDIR /app
 COPY package.json bun.lock ./
-RUN bun install --production --frozen-lockfile
+RUN bun ci
 
 # Tahap 4: image khusus migration.
 # Sequelize CLI perlu Node.js karena eksekusinya lewat Bun tidak kompatibel.
 # Hanya config, .sequelizerc, migration, dan dependency yang diperlukan yang disalin.
 # Bisa dipakai untuk migrate maupun command Sequelize CLI lain.
-FROM node:20-alpine AS migration
+FROM node:24-alpine AS migration
 WORKDIR /app
 RUN addgroup -S app && adduser -S -G app app
 COPY --from=dependencies --chown=app:app /app/node_modules ./node_modules
@@ -40,6 +40,7 @@ CMD ["db:migrate"]
 FROM oven/bun:1-alpine AS runtime
 WORKDIR /app
 RUN addgroup -S app && adduser -S -G app app
+RUN mkdir -p /app/logs/app /app/logs/error && chown -R app:app /app/logs
 COPY --from=production-dependencies --chown=app:app /app/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/dist ./dist
 COPY --chown=app:app package.json ./

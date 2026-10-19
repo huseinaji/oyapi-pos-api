@@ -1,10 +1,11 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { UserAuthPayload } from './utils/auth.type';
 import { LoginDto } from './dto/login.dto';
 import { User } from '../user/entities/user.entity';
 import { SignupDto } from './dto/signup.dto';
 import { HandleSequelizeErrors } from '../../common/decorator/db-err-handler';
+import { UserStatus } from '../user/utils/user.types';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,10 @@ export class AuthService {
     const user = await this.userService.findByUsernameOrEmail(dto.usernameOrEmail);
 
     if (!user || !await this.comparePassword(dto.password, user.password)) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -48,8 +53,19 @@ export class AuthService {
 
   @HandleSequelizeErrors()
   async register(data: SignupDto) {
-    return await this.userService.create({
-      ...data,
-    })
+    const user = await this.userService.create({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+    });
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      createdAt: user.createdAt,
+    };
   }
 }
