@@ -20,17 +20,10 @@ import RedisStore from 'fastify-session-redis-store';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const IS_PROD = GET_ENV_VARIABLE('NODE_ENV') === 'production';
-const CORS_ORIGINS = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',')
+const CORS_ORIGINS = GET_ENV_VARIABLE('CORS_ORIGINS', '')
+  ?? GET_ENV_VARIABLE('CORS_ORIGINS').split(',')
       .map((origin) => origin.trim())
       .filter(Boolean)
-  : IS_PROD
-    ? []
-    : [
-        'http://localhost:3003',
-        'http://192.168.1.9:3003',
-        'http://192.168.1.10',
-      ];
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(

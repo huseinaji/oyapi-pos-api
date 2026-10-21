@@ -44,9 +44,13 @@ export class StoreInvoiceController {
   getAllInvoices(
     @Query() query: QuerySalesInvoiceDto,
     @Query() pagination: PaginationDto,
+    @Req() req: FastifyRequest,
   ) {
-    return this.salesInvoiceService.findAndCountAll(
-      { queryDto: query },
+    return this.salesInvoiceService.findAndCountAll({ 
+      queryDto: {
+        ...query,
+        storeId: req.storeSession.storeId,
+      } },
       pagination,
     );
   }

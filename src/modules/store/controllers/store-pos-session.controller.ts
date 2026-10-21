@@ -57,9 +57,13 @@ export class StorePosSessionController {
   @Get()
   getAllPosSession(
     @Query() query: QueryPosSessionEntryDto,
+    @Req() req: FastifyRequest,
     @Query() pagination: PaginationDto = new PaginationDto(),
   ) {
-    return this.posSessionService.findAndCountAll(query, pagination);
+    return this.posSessionService.findAndCountAll({
+      ...query,
+      storeId: req.storeSession.storeId,
+    }, pagination);
   }
 
   @ApiOperation({ summary: 'Close the current POS session', description: 'Closes the active POS session for the current store.' })

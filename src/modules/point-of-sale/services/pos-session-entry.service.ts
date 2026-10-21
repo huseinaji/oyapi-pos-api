@@ -195,6 +195,10 @@ export class PosSessionEntryService {
         tx,
       );
 
+      if (!availableItems.length) {
+        throw new NotFoundException('You have to create an item to open pos session')
+      }
+
       const requestedOpeningStocks = await this.validateOpeningEntryItems(items, availableItems);
 
       const entity = await this.model.create(
