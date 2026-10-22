@@ -131,7 +131,7 @@ Format mapping Docker adalah `host:container`. Jadi `127.0.0.1:3001:3001` membua
 
 Kalau `APP_PORT` tidak diset, aplikasi memakai port default `3000`; samakan port container di opsi `-p` dengan port tersebut.
 
-Kalau sebelumnya sudah punya image dengan tag yang sama, build ulang setelah ada perubahan Dockerfile atau kode aplikasi. Entry point hasil build NestJS di image ini adalah `dist/src/main.js`.
+Kalau sebelumnya sudah punya image dengan tag yang sama, build ulang setelah ada perubahan Dockerfile atau kode aplikasi. Entry point hasil build NestJS di image ini adalah `dist/main.js`.
 
 ### Pull image dari GitHub Container Registry
 
@@ -169,7 +169,7 @@ Urutan amannya: jalankan migration satu kali sebagai langkah deploy, lalu start 
 
 Login dan registrasi dibatasi masing-masing 5 dan 3 request per menit per alamat IP; ada juga batas umum 120 request per menit. Penyimpanan limiter bawaan ada di memori proses, jadi untuk deployment multi-replica perlu storage rate-limit terdistribusi.
 
-Log production ditulis sebagai file JSON berotasi di volume `/app/logs`. Named volume direkomendasikan karena direktorinya disiapkan dengan ownership user aplikasi non-root. Kalau memilih bind mount host, pastikan direktori host yang dipasang ke `/app/logs` bisa ditulis oleh UID/GID container.
+Log production ditulis sebagai file JSON berotasi di volume `/app/logs`. Proses aplikasi berjalan non-root sebagai UID/GID `1000:1001`, cocok dengan user Ubuntu default untuk bind mount seperti `./data/logs:/app/logs`. Pastikan direktori host yang dipasang ke `/app/logs` bisa ditulis oleh UID/GID tersebut. Named volume juga didukung.
 
 Referensi Neon: [Connection pooling](https://neon.com/docs/connect/connection-pooling).
 

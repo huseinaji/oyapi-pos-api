@@ -39,11 +39,10 @@ CMD ["db:migrate"]
 # Tidak membawa source TypeScript, CLI, atau devDependencies; proses jalan sebagai non-root.
 FROM oven/bun:1-alpine AS runtime
 WORKDIR /app
-RUN addgroup -S app && adduser -S -G app app
-RUN mkdir -p /app/logs/app /app/logs/error && chown -R app:app /app/logs
-COPY --from=production-dependencies --chown=app:app /app/node_modules ./node_modules
-COPY --from=build --chown=app:app /app/dist ./dist
-COPY --chown=app:app package.json ./
-USER app
-EXPOSE 3000
+
+COPY --from=production-dependencies --chown=1000:1001 /app/node_modules ./node_modules
+COPY --from=build --chown=1000:1001 /app/dist ./dist
+COPY --chown=1000:1001 package.json ./
+USER 1000:1001
+EXPOSE 8000
 CMD ["bun", "dist/main.js"]
