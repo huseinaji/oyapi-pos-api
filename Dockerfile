@@ -46,4 +46,4 @@ COPY --from=build --chown=app:app /app/dist ./dist
 COPY --chown=app:app package.json ./
 USER app
 EXPOSE 3000
-CMD ["bun", "dist/src/main.js"]
+CMD ["bun", "dist/main.js"]
