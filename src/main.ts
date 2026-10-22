@@ -28,7 +28,7 @@ const CORS_ORIGINS = GET_ENV_VARIABLE('CORS_ORIGINS', '')
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({ trustProxy: true }),
   );
 
   app.enableCsrfProtection();
