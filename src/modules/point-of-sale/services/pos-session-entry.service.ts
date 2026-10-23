@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
@@ -21,8 +20,6 @@ import { GET_POSSESSION_ENTRY_ITEM_INCLUDE } from '../utils/pos-session-entry-it
 import { BinService } from '../../inventory/services/bin.service';
 import { Item } from '../../inventory/entities/item.entity';
 import { ItemStatus, ItemType } from '../../inventory/utils/types/item.type';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { GET_ENV_VARIABLE } from '../../../common/utils';
 import { GET_USER_INCLUDE } from '../../user/utils/user.include';
 
 export type PosSessionStockRequirement = {
@@ -33,7 +30,6 @@ export type PosSessionStockRequirement = {
 
 @Injectable()
 export class PosSessionEntryService {
-  private logger = new Logger(PosSessionEntryService.name);
   constructor(
     @InjectModel(PosSessionEntry) private model: typeof PosSessionEntry,
     @InjectModel(PosSessionEntryItem)
@@ -286,23 +282,5 @@ export class PosSessionEntryService {
 
       await currentSession.save(tx);
     })
-  }
-
-  private async autocloseSession() {
-    const sessions = await this.model.findAll({
-      where: {
-        status: PosSessionEntryStatus.ACTIVE
-      }
-    });
-
-    await Promise.all(
-      sessions.map(async s => this.closePos(s.id, GET_ENV_VARIABLE('INITIAL_USER_ID')))
-    )
-  }
-
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  protected cronMidnight() {
-    this.logger.debug('Cron midnight running');
-    this.autocloseSession()
   }
 }

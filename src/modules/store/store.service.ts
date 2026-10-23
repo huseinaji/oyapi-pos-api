@@ -1,12 +1,25 @@
-import { Injectable, InternalServerErrorException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { BaseService, FindAllOptions, TxOptions } from '../../common/base/base.service';
-import type { CreateOptions, FindOneOptions } from '../../common/base/base.service'
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import {
+  BaseService,
+  FindAllOptions,
+  TxOptions,
+} from '../../common/base/base.service';
+import type {
+  CreateOptions,
+  FindOneOptions,
+} from '../../common/base/base.service';
 import { Store } from './entities/store.entity';
 import { InjectModel } from '@nestjs/sequelize';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { GET_ENV_VARIABLE } from '../../common/utils';
 import { StoreMember } from './entities/store-member.entity';
-import { StoreRole } from './utils/store.types';
+import { StoreRole, StoreStatus } from './utils/store.types';
 import { Sequelize } from 'sequelize-typescript';
 import { CreateStoreDto } from './dto/create-store.dto';
 import type { UserAuthPayload } from '../auth/utils/auth.type';
@@ -15,15 +28,19 @@ import { GET_USER_INCLUDE } from '../user/utils/user.include';
 import { UserRole } from '../user/utils/user.types';
 import { GET_STORE_MEMBER_INCLUDE } from './utils/store-member.include';
 import { FindOptions, Op } from 'sequelize';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { PosSessionEntryService } from '../point-of-sale/services/pos-session-entry.service';
 
 @Injectable()
 export class StoreService extends BaseService<Store> {
+  private logger = new Logger(StoreService.name);
   constructor(
     @InjectModel(Store) protected model: typeof Store,
     @InjectModel(StoreMember) protected storeMemberModel: typeof StoreMember,
     private sequelize: Sequelize,
+    private posSessionService: PosSessionEntryService,
   ) {
-    super(model)
+    super(model);
   }
 
   async getMemberData(id: string, userId: string, options?: TxOptions) {
@@ -33,20 +50,30 @@ export class StoreService extends BaseService<Store> {
     });
   }
 
-  private async createInitialStoreMember(id: string, user: UserAuthPayload, options?: TxOptions) {
+  private async createInitialStoreMember(
+    id: string,
+    user: UserAuthPayload,
+    options?: TxOptions,
+  ) {
     if (![UserRole.ADMIN].includes(user.role)) {
-      await this.storeMemberModel.create({
-        storeId: id,
-        userId: GET_ENV_VARIABLE('INITIAL_USER_ID'),
-        role: StoreRole.ADMIN,
-      }, options);
+      await this.storeMemberModel.create(
+        {
+          storeId: id,
+          userId: GET_ENV_VARIABLE('INITIAL_USER_ID'),
+          role: StoreRole.ADMIN,
+        },
+        options,
+      );
     }
 
-    return await this.storeMemberModel.create({
-      storeId: id,
-      userId: user.sub,
-      role: StoreRole.ADMIN
-    }, options);
+    return await this.storeMemberModel.create(
+      {
+        storeId: id,
+        userId: user.sub,
+        role: StoreRole.ADMIN,
+      },
+      options,
+    );
   }
 
   @HandleSequelizeErrors()
@@ -54,63 +81,70 @@ export class StoreService extends BaseService<Store> {
     const dto = createOptions.createDto;
     const user = createOptions.user;
 
-    if (!user) throw new InternalServerErrorException('User missing create store');
+    if (!user)
+      throw new InternalServerErrorException('User missing create store');
 
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
 
-      const store = await this.model.create({
-        ...dto,
-        createdBy: user.sub,
-      }, tx)
+      const store = await this.model.create(
+        {
+          ...dto,
+          createdBy: user.sub,
+        },
+        tx,
+      );
 
       await this.createInitialStoreMember(store.id, user, tx);
 
       return store;
-    })
+    });
   }
 
   @HandleSequelizeErrors()
   async assignMember(id: string, userId: string) {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
 
       const member = await this.getMemberData(id, userId, tx);
 
       if (member) {
-        throw new UnprocessableEntityException('User has already assigned to this store');
+        throw new UnprocessableEntityException(
+          'User has already assigned to this store',
+        );
       }
 
       return await this.storeMemberModel.create({
         storeId: id,
         userId,
-        role: StoreRole.CASHIER
-      })
+        role: StoreRole.CASHIER,
+      });
     });
   }
 
   async getMembers(id: string) {
     return await this.storeMemberModel.findAndCountAll({
       where: {
-        storeId: id
+        storeId: id,
       },
       include: [
         {
           ...GET_USER_INCLUDE(),
           required: true,
           where: {
-            role: { [Op.ne]: UserRole.ADMIN }
-          }
-        }
+            role: { [Op.ne]: UserRole.ADMIN },
+          },
+        },
       ],
-    })
+    });
   }
 
   async selectStore(id: string, user: UserAuthPayload) {
     const storeData = await this.findOne({ id });
     const userMember = await this.getMemberData(id, user.sub);
 
-    if (!userMember) throw new NotFoundException('You are not member of this store')
+    if (!userMember)
+      throw new NotFoundException('You are not member of this store');
 
     return {
       store: storeData.get({ plain: true }),
@@ -125,15 +159,18 @@ export class StoreService extends BaseService<Store> {
           ...GET_STORE_MEMBER_INCLUDE(),
           required: true,
           where: {
-            userId: userContext.sub
-          }
-        }
+            userId: userContext.sub,
+          },
+        },
       ],
-      ...(pagination?.getPagination() ?? {})
-    })
+      ...(pagination?.getPagination() ?? {}),
+    });
   }
 
-  async findOne(findOneOptions: FindOneOptions, options?: FindOptions): Promise<Store> {
+  async findOne(
+    findOneOptions: FindOneOptions,
+    options?: FindOptions,
+  ): Promise<Store> {
     const result = await this.model.findOne({
       where: { id: findOneOptions.id },
       include: [
@@ -141,12 +178,12 @@ export class StoreService extends BaseService<Store> {
         {
           ...GET_STORE_MEMBER_INCLUDE(),
           where: {
-            userId: { [Op.ne]: GET_ENV_VARIABLE('INITIAL_USER_ID') }
-          }
-        }
+            userId: { [Op.ne]: GET_ENV_VARIABLE('INITIAL_USER_ID') },
+          },
+        },
       ],
       ...options,
-    })
+    });
 
     return this.validateExisting(result);
   }
@@ -167,10 +204,40 @@ export class StoreService extends BaseService<Store> {
         {
           ...GET_STORE_MEMBER_INCLUDE(),
           limit: 3,
-        }
+        },
       ],
       ...(pagination?.getPagination() ?? {}),
       ...options,
     });
+  }
+
+  private async autocloseSession() {
+    const storeData = await this.model.findAll({
+      where: {
+        status: StoreStatus.ACTIVE,
+      },
+    });
+
+    const results = await Promise.allSettled(
+      storeData.map((store) =>
+        this.posSessionService.closePos(
+          store.id,
+          GET_ENV_VARIABLE('INITIAL_USER_ID'),
+        ),
+      ),
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.warn(
+          `Failed to auto-close POS session ${storeData[index].id}: ${result.reason}`,
+        );
+      }
+    });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { timeZone: 'Asia/Jakarta' } )
+  protected async cronMidnight() {
+    await this.autocloseSession();
   }
 }

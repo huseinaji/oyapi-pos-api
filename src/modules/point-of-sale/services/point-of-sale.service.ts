@@ -154,7 +154,6 @@ export class PointOfsaleService {
         };
       });
 
-    console.log(result);
     return result;
   }
 

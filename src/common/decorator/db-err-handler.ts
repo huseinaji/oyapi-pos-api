@@ -38,7 +38,6 @@ export function HandleSequelizeErrors() {
         }
 
         if (error instanceof ForeignKeyConstraintError) {
-          console.log(error)
           throw new BadRequestException({
             message: "Referenced resource does not exist",
             field: error.fields ?? error.index,

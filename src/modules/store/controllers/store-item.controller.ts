@@ -121,7 +121,6 @@ export class StoreItemController {
     @Req() req: FastifyRequest,
     @Query() pagination: PaginationDto = new PaginationDto(),
   ) {
-    console.log(query, pagination, req.storeSession.storeId)
     return this.itemService.findAndCountAll(
       {
         ...query,

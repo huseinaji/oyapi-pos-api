@@ -137,8 +137,6 @@ export class SalesInvoiceItemService extends BaseService<SalesInvoiceItem> {
       }),
     );
 
-    console.log(stockRequirements);
-
     await this.posSessionService.consumeSessionStock(
       sessionId,
       [...stockRequirements.values()],

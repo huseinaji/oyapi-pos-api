@@ -36,7 +36,7 @@ export class ItemService {
     protected itemBundleComponentModel: typeof ItemBundleComponent,
     private readonly stockLedgerService: StockLedgerEntryService,
     private sequelize: Sequelize,
-  ) { }
+  ) {}
 
   private validateExisting(entity: Item | null) {
     if (!entity) {
@@ -127,7 +127,8 @@ export class ItemService {
           isMaintainStock:
             dto.type === ItemType.ITEM_BUNDLE ? false : dto.isMaintainStock,
           basePrice: dto.type === ItemType.RAW_MATERIAL ? 0 : dto.basePrice,
-          sellingPrice: dto.type === ItemType.RAW_MATERIAL ? 0 : dto.sellingPrice,
+          sellingPrice:
+            dto.type === ItemType.RAW_MATERIAL ? 0 : dto.sellingPrice,
           createdBy: actor.sub,
         },
         {
@@ -196,14 +197,20 @@ export class ItemService {
         type: { [Op.ne]: ItemType.RAW_MATERIAL },
         status: ItemStatus.ACTIVE,
       },
-      include: [
-        GET_ITEMBUNDLECOMPONENT_INCLUDE()
-      ],
-    })
+      include: [GET_ITEMBUNDLECOMPONENT_INCLUDE()],
+    });
   }
 
   async update(id: string, data: UpdateItemDto) {
     const currentData = await this.findOne(id);
+
+    const statusIsChanging =
+      data.status !== undefined && data.status !== currentData.status;
+
+    if (statusIsChanging && currentData.type === ItemType.RAW_MATERIAL) {
+      throw new BadRequestException('Raw material item status cannot be changed');
+    }
+
     return await currentData.update(
       {
         ...data,
@@ -225,13 +232,15 @@ export class ItemService {
   private async validateDeleteItemBundleComponentUsed(item: Item) {
     const itemComponents = await this.itemBundleComponentModel.findOne({
       where: {
-        componentItemId: item.id
-      }
-    })
+        componentItemId: item.id,
+      },
+    });
 
     if (!itemComponents) return;
 
-    throw new ConflictException(`item ${item.id} is being used by item bundle ${itemComponents.id}`)
+    throw new ConflictException(
+      `item ${item.id} is being used by item bundle ${itemComponents.id}`,
+    );
   }
 
   async getSellableItemByStore(
@@ -260,7 +269,7 @@ export class ItemService {
         storeId,
         status: ItemStatus.ACTIVE,
         isMaintainStock: true,
-        type: { [Op.ne]: ItemType.ITEM_BUNDLE }
+        type: { [Op.ne]: ItemType.ITEM_BUNDLE },
       },
       include: [GET_BIN_INCLUDE()],
       ...options,

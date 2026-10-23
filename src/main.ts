@@ -21,9 +21,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const IS_PROD = GET_ENV_VARIABLE('NODE_ENV') === 'production';
 const CORS_ORIGINS = GET_ENV_VARIABLE('CORS_ORIGINS', '')
-  ?? GET_ENV_VARIABLE('CORS_ORIGINS').split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
