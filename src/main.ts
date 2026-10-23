@@ -31,7 +31,10 @@ async function bootstrap() {
     new FastifyAdapter({ trustProxy: true }),
   );
 
-  app.enableCsrfProtection();
+  app.enableCsrfProtection({
+    // Trust only configured frontend origins for cross-subdomain browser requests.
+    trustedOrigins: CORS_ORIGINS,
+  });
 
   const redisClient = new Redis(GET_ENV_VARIABLE('REDIS_HOST'));
   const sessionStore = new RedisStore({

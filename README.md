@@ -49,7 +49,7 @@ Kalau pakai Neon, dua URL ini bisa diambil dari dashboard project lewat **Connec
 
 Ganti `<pooled-host>` dan `<direct-host>` dengan hostname lengkap yang diberikan Neon. Jangan menambahkan `-pooler` secara manual—salin URL dari Neon. Simpan kedua URL sebagai rahasia; jangan commit `.env`.
 
-Di production, isi `.env` production dengan `NODE_ENV=production` dan URL Neon untuk branch/database production. Set `CORS_ORIGINS` ke daftar origin frontend, pisahkan dengan koma (contoh `https://pos.example.com`). Kalau tidak diset, CORS lintas origin ditutup di production. Swagger mati secara default di production; set `ENABLE_SWAGGER=true` hanya kalau dokumentasi memang perlu dibuka. Migration config menyediakan environment `local` dan `production`; `staging` tidak dikonfigurasi di project ini. `DATABASE_URL` dipakai aplikasi dan `DATABASE_URL_UNPOOLED` dipakai migration, baik di local maupun production. Tidak perlu mengisi `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `DB_HOST`, atau `DB_PORT`.
+Di production, isi `.env` production dengan `NODE_ENV=production` dan URL Neon untuk branch/database production. Set `CORS_ORIGINS` ke daftar origin frontend yang tepat, pisahkan dengan koma tanpa trailing slash (contoh `https://pos.oyapi.my.id,https://pos2.oyapi.my.id`). Aplikasi yang mengatur CORS harus menjadi satu-satunya lapisan yang mengirim `Access-Control-Allow-Origin`; hapus `add_header Access-Control-Allow-Origin` atau konfigurasi CORS lain dari reverse proxy untuk upstream ini, supaya respons preflight tidak memiliki header origin ganda. Kalau tidak diset, CORS lintas origin ditutup di production. Swagger mati secara default di production; set `ENABLE_SWAGGER=true` hanya kalau dokumentasi memang perlu dibuka. Migration config menyediakan environment `local` dan `production`; `staging` tidak dikonfigurasi di project ini. `DATABASE_URL` dipakai aplikasi dan `DATABASE_URL_UNPOOLED` dipakai migration, baik di local maupun production. Tidak perlu mengisi `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `DB_HOST`, atau `DB_PORT`.
 
 Jangan taruh credential production di repository atau di README.
 
@@ -108,28 +108,23 @@ docker build --target migration -t pos-app:migration .
 docker run --rm --env-file .env pos-app:migration
 ```
 
-Setelah migration sukses, jalankan API. Container membaca `APP_PORT` dari `.env`, jadi port setelah titik dua di `-p` harus sama dengan nilai `APP_PORT`. Misalnya kalau `.env` berisi `APP_PORT=3001`:
+Setelah migration sukses, jalankan API menggunakan Compose. Redis tetap berjalan di host (tidak perlu container Redis); Compose memetakan `host.docker.internal` ke gateway host agar API dapat menjangkau Redis pada port `6379` tanpa `network host`. Pastikan file `.env` tersedia di direktori yang sama dengan `compose.yaml`. API hanya dipublikasikan ke `127.0.0.1:8000`, sehingga reverse proxy di host dapat mengaksesnya:
 
 ```bash
-docker run --rm --env-file .env -p 127.0.0.1:3001:3001 pos-app:latest
+docker compose pull
+docker compose up -d
+docker compose logs -f api
 ```
 
-Untuk production, pasang named volume ke `/app/logs` agar file log tetap tersimpan walaupun container diganti:
+`compose.yaml` mengatur `REDIS_HOST=redis://host.docker.internal:6379` dan `APP_PORT=8000` khusus untuk container API, terlepas dari nilai `REDIS_HOST` di `.env` yang mungkin masih memakai `localhost`. Jika Redis menggunakan password, tambahkan `REDIS_HOST_DOCKER=redis://:password@host.docker.internal:6379` ke `.env` (URL-encode karakter khusus pada password). Arahkan reverse proxy host ke `http://127.0.0.1:8000`. Pastikan Redis di host menerima koneksi pada alamat gateway Docker, dan batasi akses port `6379` dengan firewall agar tidak dapat dijangkau dari jaringan publik. Jika Redis hanya bind ke `127.0.0.1`, container tidak bisa mengaksesnya melalui gateway; atur Redis untuk bind ke alamat gateway Docker atau interface host yang sesuai, lalu restart Redis. Compose menyimpan log aplikasi di named volume agar tetap ada setelah container diganti. Untuk menghentikan layanan:
 
 ```bash
-docker volume create pos-app-logs
-docker run -d --name pos-app --env-file .env -p 127.0.0.1:3001:3001 -v pos-app-logs:/app/logs pos-app:latest
+docker compose down
 ```
 
-Log aplikasi tersimpan di volume `pos-app-logs` pada folder `app/`, sedangkan log error ada di `error/`. Lihat isi log dengan:
+Perintah ini tidak menghapus volume log aplikasi.
 
-```bash
-docker run --rm -v pos-app-logs:/logs alpine find /logs -type f
-```
-
-Format mapping Docker adalah `host:container`. Jadi `127.0.0.1:3001:3001` membuat API tersedia di `http://localhost:3001` dan hanya bisa diakses dari komputer yang menjalankan Docker. Kalau mau pakai port `3001` di komputer tapi aplikasi di container mendengarkan `3000`, set `APP_PORT=3000` di `.env` lalu gunakan `-p 127.0.0.1:3001:3000`.
-
-Kalau `APP_PORT` tidak diset, aplikasi memakai port default `3000`; samakan port container di opsi `-p` dengan port tersebut.
+Kalau reverse proxy juga berjalan di container, hubungkan proxy ke network Compose yang sama dan arahkan upstream ke `http://api:8000`; pastikan port backend tetap tidak dipublikasikan ke jaringan publik.
 
 Kalau sebelumnya sudah punya image dengan tag yang sama, build ulang setelah ada perubahan Dockerfile atau kode aplikasi. Entry point hasil build NestJS di image ini adalah `dist/main.js`.
 
@@ -139,8 +134,8 @@ Workflow GitHub Actions akan menjalankan unit test dan build NestJS, lalu build 
 
 ```bash
 docker pull ghcr.io/<owner>/<repository>:latest
-docker volume create pos-app-logs
-docker run -d --name pos-app --env-file .env -p 127.0.0.1:3001:3001 -v pos-app-logs:/app/logs ghcr.io/<owner>/<repository>:latest
+docker compose pull
+docker compose up -d
 ```
 
 Ganti `<owner>` dan `<repository>` sesuai akun/organisasi GitHub dan nama repository-mu. Kalau package masih private, login dulu ke GHCR dengan akun GitHub yang punya akses:
