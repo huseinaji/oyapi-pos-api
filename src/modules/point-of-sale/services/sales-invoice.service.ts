@@ -68,6 +68,7 @@ export class SalesInvoiceService extends BaseService<SalesInvoice> {
     pagination?: PaginationDto,
   ): Promise<{ rows: SalesInvoice[]; count: number }> {
     return await this.model.findAndCountAll({
+      order: [['createdAt', 'desc']],
       where: {
         ...findAllOptions.queryDto,
       },

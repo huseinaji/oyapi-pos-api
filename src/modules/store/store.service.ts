@@ -19,7 +19,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { GET_ENV_VARIABLE } from '../../common/utils';
 import { StoreMember } from './entities/store-member.entity';
-import { StoreRole, StoreStatus } from './utils/store.types';
+import { StoreMemberStatus, StoreRole, StoreStatus } from './utils/store.types';
 import { Sequelize } from 'sequelize-typescript';
 import { CreateStoreDto } from './dto/create-store.dto';
 import type { UserAuthPayload } from '../auth/utils/auth.type';
@@ -109,6 +109,13 @@ export class StoreService extends BaseService<Store> {
       const member = await this.getMemberData(id, userId, tx);
 
       if (member) {
+        if (member.status === StoreMemberStatus.INACTIVE) {
+          member.status = StoreMemberStatus.ACTIVE
+          await member.save(tx);
+          
+          return member
+        }
+
         throw new UnprocessableEntityException(
           'User has already assigned to this store',
         );
@@ -120,6 +127,22 @@ export class StoreService extends BaseService<Store> {
         role: StoreRole.CASHIER,
       });
     });
+  }
+
+  @HandleSequelizeErrors()
+  async inactiveMember(id: string, userId: string) {
+    return this.sequelize.transaction(async (t) => {
+      const tx = { transaction: t };
+
+      const member = await this.getMemberData(id, userId, tx);
+      if (!member) {
+        throw new NotFoundException('User is not member of this store');
+      }
+
+      member.status = StoreMemberStatus.INACTIVE;
+      await member.save(tx);
+      return member;
+    })
   }
 
   async getMembers(id: string) {
@@ -160,6 +183,7 @@ export class StoreService extends BaseService<Store> {
           required: true,
           where: {
             userId: userContext.sub,
+            status: StoreMemberStatus.ACTIVE
           },
         },
       ],

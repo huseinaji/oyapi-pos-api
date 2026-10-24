@@ -1,6 +1,6 @@
 import { BelongsTo, Column, DataType, ForeignKey, Table } from 'sequelize-typescript';
 import { BaseModel } from '../../../common/base/base-model';
-import { StoreRole } from '../utils/store.types';
+import { StoreMemberStatus, StoreRole } from '../utils/store.types';
 import { Store } from './store.entity';
 import { User } from '../../user/entities/user.entity';
 
@@ -33,6 +33,13 @@ export class StoreMember extends BaseModel {
     defaultValue: StoreRole.CASHIER,
   })
   declare role: StoreRole;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
+    defaultValue: StoreMemberStatus.ACTIVE
+  })
+  declare status: StoreMemberStatus;
 
   @Column({
     type: DataType.BOOLEAN,

@@ -14,7 +14,7 @@ interface CreateBinInput {
 
 @Injectable()
 export class BinService {
-  constructor(@InjectModel(Bin) protected model: typeof Bin) { }
+  constructor(@InjectModel(Bin) protected model: typeof Bin) {}
 
   async updateOrCreateBin(data: CreateBinInput, options?: TxOptions) {
     const entity = await this.model.findOne({
@@ -26,10 +26,13 @@ export class BinService {
     });
 
     if (entity) {
-      return await entity.update({ qty: data.qty }, options);
+      return await entity.update(
+        { qty: data.qty, reservedQty: 0 },
+        options,
+      );
     }
 
-    return await this.model.create(
+    return await this.model.create<Bin>(
       {
         itemId: data.itemId,
         qty: data.qty,
@@ -81,17 +84,5 @@ export class BinService {
         ...options,
       },
     );
-  }
-
-  async updateAfterSessionPos(itemId: string, soldQty: number, options?: TxOptions) {
-    const currentBin = await this.model.findOne({ where: { itemId }, ...options });
-    if (!currentBin) throw new NotFoundException('Bin data not found');
-
-    const actualQty = currentBin.qty - soldQty;
-
-    currentBin.qty = actualQty;
-    currentBin.actualQty = actualQty;
-    currentBin.reservedQty = 0;
-    await currentBin.save(options);
   }
 }

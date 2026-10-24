@@ -21,6 +21,8 @@ import { BinService } from '../../inventory/services/bin.service';
 import { Item } from '../../inventory/entities/item.entity';
 import { ItemStatus, ItemType } from '../../inventory/utils/types/item.type';
 import { GET_USER_INCLUDE } from '../../user/utils/user.include';
+import { StockLedgerEntryService } from '../../inventory/services/stock-ledger-entry.service';
+import { LedgerDirection, LedgerReference } from '../../inventory/utils/types/stock-ledger-entry.type';
 
 export type PosSessionStockRequirement = {
   itemId: string;
@@ -37,6 +39,7 @@ export class PosSessionEntryService {
     private readonly itemService: ItemService,
     private readonly binService: BinService,
     private readonly sequelize: Sequelize,
+    private readonly stockLedgerEntryService: StockLedgerEntryService,
   ) { }
 
   async getSessionByStore(storeId: string, options?: TxOptions) {
@@ -269,11 +272,15 @@ export class PosSessionEntryService {
 
       await Promise.all(
         currentSession.items.map(async m => {
-          await this.binService.updateAfterSessionPos(
-            m.itemId,
-            m.soldQty,
-            tx,
-          );
+          if (m.soldQty === 0) return;
+          await this.stockLedgerEntryService.create({ createDto: {
+            itemId: m.itemId,
+            qty: m.soldQty,
+            ledgerDirection: LedgerDirection.OUT,
+            storeId,
+            reference: LedgerReference.POS_SESSION,
+            referenceId: currentSession.id
+          }}, tx);
         })
       )
       currentSession.closedBy = closedBy;

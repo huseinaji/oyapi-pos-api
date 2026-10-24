@@ -11,4 +11,5 @@ export enum StockLedgerEntryStatus {
 export enum LedgerReference {
   SI = 'sales_invoice',
   ITEM = 'item',
+  POS_SESSION = 'pos_session',
 }

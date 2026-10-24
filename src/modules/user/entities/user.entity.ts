@@ -40,7 +40,7 @@ export class User extends BaseModel {
   declare lastLogin: string;
 
   @HasMany(() => StoreMember)
-  declare storeMmebers: StoreMember[]
+  declare storeMembers: StoreMember[]
 
   @BeforeDestroy
   static async setStatusInactive(instance: User) {
