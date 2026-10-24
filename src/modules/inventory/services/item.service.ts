@@ -111,8 +111,8 @@ export class ItemService {
     }
 
     const records = await Promise.all(data.map(async (d) => {
-      const itemData = await this.findOne(d.componentItemId, options);
-      if (itemData.type !== ItemType.RAW_MATERIAL) throw new UnprocessableEntityException('Only raw material item can be component item');
+      const compItemData = await this.findOne(d.componentItemId, options);
+      if (compItemData.type !== ItemType.RAW_MATERIAL) throw new UnprocessableEntityException('Only raw material item can be component item');
       return { ...d, itemId: itemData.id }
     }));
 
