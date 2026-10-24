@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { TxOptions } from '../../../common/base/base.service';
@@ -109,7 +110,11 @@ export class ItemService {
       );
     }
 
-    const records = data.map((d) => ({ ...d, itemId: itemData.id }));
+    const records = await Promise.all(data.map(async (d) => {
+      const itemData = await this.findOne(d.componentItemId, options);
+      if (itemData.type !== ItemType.RAW_MATERIAL) throw new UnprocessableEntityException('Only raw material item can be component item');
+      return { ...d, itemId: itemData.id }
+    }));
 
     return this.itemBundleComponentModel.bulkCreate(records, options);
   }
