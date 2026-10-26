@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { StoreRole } from "../utils/store.types";
+import { StoreRole } from "../../utils/store.types";
 import { IsBoolean, IsEnum, IsString } from "class-validator";
 import { Type } from "class-transformer";
 

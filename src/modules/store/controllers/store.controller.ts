@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -17,7 +18,7 @@ import {
   UserAuthPayload,
 } from '../../auth/utils/auth.type';
 import { ApiOperation } from '@nestjs/swagger';
-import { CreateStoreDto } from '../dto/create-store.dto';
+import { CreateStoreDto } from '../dto/store-dto/create-store.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { Roles, SessionFree } from '../../../common/decorator/decorator';
 import { UserRole } from '../../user/utils/user.types';
@@ -28,6 +29,7 @@ import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role
 import { UpdateStoreDto } from '../dto/update-store.dto';
 import type { FastifySessionObject } from '@fastify/session';
 import type { FastifyRequest } from 'fastify';
+import { UpdateStoreMemberDto } from '../dto/store-member-dto/update-store-member.dto';
 
 @SessionFree()
 @Controller({ path: 'store', version: '1' })
@@ -112,6 +114,25 @@ export class StoreController {
   @Get(':id/members')
   getStoreMembers(@Param('id') id: string) {
     return this.storeService.getMembers(id);
+  }
+
+  @ApiOperation({
+    summary: 'Edit store members',
+  })
+  @StoreAccess({
+    roles: [StoreRole.ADMIN],
+  })
+  @UseGuards(StoreAcessRoleGuard)
+  @Patch(':id/members/:memberId')
+  async editStoreMember(
+    @Param('id') storeId: string,
+    @Param('memberId') memberId: string,
+    @Body() data: UpdateStoreMemberDto
+  ) {
+    await this.storeService.updateMember(memberId, storeId, data)
+    return {
+      message: 'success'
+    }
   }
 
   @ApiOperation({
