@@ -19,14 +19,14 @@ import { UpdateItemDto } from '../../inventory/dto/items/update-item.dto';
 import { ItemCategoryService } from '../../inventory/services/item-category.service';
 import { CreateStoreItemDto } from '../dto/createStoreItem.dto';
 import { CreateStoreItemCategoryDto } from '../dto/create-store-itemcategory.dto';
-import { StoreResourceOwnershipGuard } from '../guards/store-resource-ownership/store-resource-ownership.guard';
+import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 import { ItemBundleComponentService } from '../../inventory/services/item-bundle-component.service';
 import { CreateItemBundleComponentDto } from '../../inventory/dto/item-bundle-component/create-item-bundle-component.dto';
 import { StoreAccess } from '../utils/decorators/store.decorator';
 import { StoreRole } from '../utils/store.types';
 import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
 
-@UseGuards(StoreResourceOwnershipGuard)
+@UseGuards(StoreContextGuard)
 @Controller({ path: 'store/:id/items', version: '1' })
 export class StoreItemController {
   constructor(
@@ -103,8 +103,11 @@ export class StoreItemController {
     description: 'ID of the store that owns the category.',
   })
   @Delete('categories/:categoryId')
-  async deleteCategory(@Param('categoryId') categoryId: string) {
-    await this.itemCategoryService.remove({ id: categoryId });
+  async deleteCategory(
+    @Param('id') storeId: string,
+    @Param('categoryId') categoryId: string,
+  ) {
+    await this.itemCategoryService.removeForStore(categoryId, storeId);
     return {
       message: 'success',
     };
@@ -136,8 +139,8 @@ export class StoreItemController {
     description: 'ID of the store that owns the item.',
   })
   @Get(':itemId')
-  findOne(@Param('itemId') itemId: string) {
-    return this.itemService.findOne(itemId);
+  findOne(@Param('id') storeId: string, @Param('itemId') itemId: string) {
+    return this.itemService.findOneForStore(itemId, storeId);
   }
 
   @ApiOperation({ summary: 'Update a store item', description: 'Updates the supplied fields for the item identified by itemId.' })
@@ -150,8 +153,12 @@ export class StoreItemController {
     description: 'ID of the store that owns the item.',
   })
   @Patch(':itemId')
-  update(@Param('itemId') itemId: string, @Body() data: UpdateItemDto) {
-    return this.itemService.update(itemId, data);
+  update(
+    @Param('id') storeId: string,
+    @Param('itemId') itemId: string,
+    @Body() data: UpdateItemDto,
+  ) {
+    return this.itemService.updateForStore(itemId, storeId, data);
   }
 
   @ApiOperation({ summary: 'Delete a store item', description: 'Deletes the item identified by itemId.' })
@@ -164,8 +171,11 @@ export class StoreItemController {
     description: 'ID of the store that owns the item.',
   })
   @Delete(':itemId')
-  async remove(@Param('itemId') itemId: string) {
-    await this.itemService.remove(itemId);
+  async remove(
+    @Param('id') storeId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    await this.itemService.removeForStore(itemId, storeId);
 
     return {
       message: 'success',
@@ -175,9 +185,10 @@ export class StoreItemController {
   @ApiOperation({ summary: 'Add a bundle component', description: 'Adds the submitted item as a component of the specified bundle item.' })
   @Post(':itemId/component')
   updateComponentItem(
+    @Param('id') storeId: string,
     @Param('itemId') itemId: string,
     @Body() data: CreateItemBundleComponentDto
   ) {
-    return this.itemBundleComponentService.create(data, itemId);
+    return this.itemBundleComponentService.create(data, itemId, storeId);
   }
 }

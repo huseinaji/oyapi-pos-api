@@ -1,29 +1,27 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectModel } from "@nestjs/sequelize";
-import { ItemBundleComponent } from "../entities/item-bundle-component.entity";
-import { TxOptions } from "../../../common/base/base.service";
-import { CreateItemBundleComponentDto } from "../dto/item-bundle-component/create-item-bundle-component.dto";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { ItemBundleComponent } from '../entities/item-bundle-component.entity';
+import { CreateItemBundleComponentDto } from '../dto/item-bundle-component/create-item-bundle-component.dto';
+import { ItemService } from './item.service';
 
 @Injectable()
 export class ItemBundleComponentService {
   constructor(
-    @InjectModel(ItemBundleComponent) private model: typeof ItemBundleComponent
+    @InjectModel(ItemBundleComponent) private model: typeof ItemBundleComponent,
+    private readonly itemService: ItemService,
   ) {}
 
-  async findOne(id: string) {
-    const result = await this.model.findByPk(id);
-    if (!result) {
-      throw new NotFoundException('item component not found');
-    }
+  async create(
+    data: CreateItemBundleComponentDto,
+    itemId: string,
+    storeId: string,
+  ) {
+    await this.itemService.findOneForStore(itemId, storeId);
+    await this.itemService.findOneForStore(data.componentItemId, storeId);
 
-    return result;
-  }
-
-  create(data: CreateItemBundleComponentDto, itemId: string) {
     return this.model.create({
       ...data,
-      itemId
-    })
+      itemId,
+    });
   }
-
 }

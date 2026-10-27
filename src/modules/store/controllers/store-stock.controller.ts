@@ -6,9 +6,9 @@ import { StockLedgerEntryService } from '../../inventory/services/stock-ledger-e
 import { BinService } from '../../inventory/services/bin.service';
 import { QueryStockLedgerEntryDto } from '../../inventory/dto/stock-ledger-entry/query-stockledgerentry.dto';
 import { QueryBinDto } from '../../inventory/dto/bin/query-bin.dto';
-import { StoreResourceOwnershipGuard } from '../guards/store-resource-ownership/store-resource-ownership.guard';
+import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 
-@UseGuards(StoreResourceOwnershipGuard)
+@UseGuards(StoreContextGuard)
 @Controller({ path: 'store/:id', version: '1' })
 export class StoreStockController {
   constructor(

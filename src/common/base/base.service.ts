@@ -12,30 +12,14 @@ import { UserAuthPayload } from '../../modules/auth/utils/auth.type';
 export interface TxOptions {
   transaction: Transaction
 }
-export interface UpdateOptions<TDto = any> {
-  id: string;
-  updateDto: TDto;
-  user?: UserAuthPayload;
-}
 
 export interface CreateOptions<TDto = any> {
   createDto: TDto;
   user?: UserAuthPayload;
 }
 
-export interface FindOneOptions {
-  id: string;
-  user?: UserAuthPayload;
-}
-
 export interface FindAllOptions<TDto = any> {
   queryDto: TDto;
-  user?: UserAuthPayload;
-}
-
-export interface RemoveOptions {
-  id: string;
-  user?: UserAuthPayload;
 }
 
 export abstract class BaseService<
@@ -46,13 +30,14 @@ export abstract class BaseService<
   }
   async create(createOptions: CreateOptions, options?: TxOptions): Promise<T> {
     try {
+      const createDto = { ...createOptions.createDto };
       if (
         createOptions.user &&
         Object.keys(this.model.getAttributes()).includes('createdBy')
       ) {
-        createOptions.createDto.createdBy = createOptions.user.sub;
+        Object.assign(createDto, { createdBy: createOptions.user.sub });
       }
-      return await this.model.create({ ...createOptions.createDto }, options);
+      return await this.model.create(createDto, options);
     } catch (err) {
       if (err instanceof UniqueConstraintError) {
         const errors = err.errors.map((e) => ({
@@ -98,17 +83,21 @@ export abstract class BaseService<
   }
 
   async findOne(
-    findOneOptions: FindOneOptions,
+    id: string,
     options?: FindOptions,
   ): Promise<T> {
-    const entity = await this.model.findByPk(findOneOptions.id, {
+    const entity = await this.model.findByPk(id, {
       ...options,
     });
     return this.validateExisting(entity);
   }
 
-  async update(updateOptions: UpdateOptions, options?: TxOptions): Promise<T> {
-    const hasValue = Object.values(updateOptions.updateDto).some(
+  async update<TDto extends object>(
+    id: string,
+    updateDto: TDto,
+    opt?: { user?: UserAuthPayload; tx?: TxOptions },
+  ): Promise<T> {
+    const hasValue = Object.values(updateDto).some(
       (value) => value !== undefined,
     );
 
@@ -116,32 +105,32 @@ export abstract class BaseService<
       throw new BadRequestException('Request body cannot be empty');
     }
 
-    const entity = await this.findOne(
-      { id: updateOptions.id, user: updateOptions.user },
-      options,
-    );
+    const entity = await this.findOne(id, opt?.tx);
 
     if (
-      updateOptions.user &&
+      opt?.user &&
       Object.keys(this.model.getAttributes()).includes('updatedBy')
     ) {
-      updateOptions.updateDto.updatedBy = updateOptions.user.sub;
+      await entity.update({ ...updateDto, updatedBy: opt.user.sub }, opt.tx);
+    } else {
+      await entity.update({ ...updateDto }, opt?.tx);
     }
 
-    await entity.update({ ...updateOptions.updateDto }, options);
     return entity;
   }
 
   async remove(
-    removeOptions: RemoveOptions,
-    options?: TxOptions,
+    id: string,
+    opt?: { user?: UserAuthPayload; tx?: TxOptions },
   ): Promise<boolean> {
-    const entity = await this.findOne({ id: removeOptions.id }, options);
-    // if entity has updatedBy field, update it with userId from removeOptions before deleting, otherwise just delete
-    if ('updatedBy' in entity.dataValues) {
-      await entity.update({ updatedBy: removeOptions.user?.sub }, options);
+    const entity = await this.findOne(id, opt?.tx);
+    if (
+      opt?.user &&
+      Object.keys(this.model.getAttributes()).includes('updatedBy')
+    ) {
+      await entity.update({ updatedBy: opt.user.sub }, opt.tx);
     }
-    await entity.destroy(options);
+    await entity.destroy(opt?.tx);
     return true;
   }
 

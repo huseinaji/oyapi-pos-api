@@ -10,10 +10,7 @@ import {
   FindAllOptions,
   TxOptions,
 } from '../../common/base/base.service';
-import type {
-  CreateOptions,
-  FindOneOptions,
-} from '../../common/base/base.service';
+import type { CreateOptions } from '../../common/base/base.service';
 import { Store } from './entities/store.entity';
 import { InjectModel } from '@nestjs/sequelize';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -184,7 +181,7 @@ export class StoreService extends BaseService<Store> {
   }
 
   async selectStore(id: string, user: UserAuthPayload) {
-    const storeData = await this.findOne({ id });
+    const storeData = await this.findOne(id);
     const userMember = await this.getMemberData(id, user.sub);
 
     if (!userMember)
@@ -213,11 +210,11 @@ export class StoreService extends BaseService<Store> {
   }
 
   async findOne(
-    findOneOptions: FindOneOptions,
+    id: string,
     options?: FindOptions,
   ): Promise<Store> {
     const result = await this.model.findOne({
-      where: { id: findOneOptions.id },
+      where: { id },
       include: [
         GET_USER_INCLUDE(),
         {

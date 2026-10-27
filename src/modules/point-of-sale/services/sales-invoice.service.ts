@@ -1,14 +1,17 @@
-import { ForbiddenException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import {
   BaseService,
   CreateOptions,
   FindAllOptions,
-  FindOneOptions,
   TxOptions,
 } from '../../../common/base/base.service';
 import { InjectModel } from '@nestjs/sequelize';
 import { SalesInvoice } from '../entities/sales-invoice.entity';
-import { FindOptions } from 'sequelize';
+import { FindOptions, Op, WhereOptions } from 'sequelize';
 import { GET_SALESINVOICEITEM_INCLUDE } from '../utils/sales-invoice-item.include';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { QuerySalesInvoiceDto } from '../dto/query-sales-invoice.dto';
@@ -17,12 +20,19 @@ import { UserAuthPayload } from '../../auth/utils/auth.type';
 import { SalesInvoiceStatus } from '../utils/pos.type';
 import { UserRole } from '../../user/utils/user.types';
 import { Sequelize } from 'sequelize-typescript';
+import { DateRangeQueryType } from '../../../common/dto/datetime-query.dto';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezonePlugin from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
 
 @Injectable()
 export class SalesInvoiceService extends BaseService<SalesInvoice> {
   constructor(
     @InjectModel(SalesInvoice) protected model: typeof SalesInvoice,
-    private sequelize: Sequelize
+    private sequelize: Sequelize,
   ) {
     super(model);
   }
@@ -49,15 +59,16 @@ export class SalesInvoiceService extends BaseService<SalesInvoice> {
     );
   }
 
-  async findOne(findOneOptions: FindOneOptions, options?: FindOptions) {
-    const entity = await this.model.findByPk(findOneOptions.id, {
+  async findOneForStore(id: string, storeId: string, options?: FindOptions) {
+    const entity = await this.model.findOne({
       ...options,
+      where: { id, storeId },
       include: [
         GET_SALESINVOICEITEM_INCLUDE(),
         {
           ...GET_USER_INCLUDE(),
-          as: 'creator'
-        }
+          as: 'creator',
+        },
       ],
     });
     return this.validateExisting(entity);
@@ -67,35 +78,57 @@ export class SalesInvoiceService extends BaseService<SalesInvoice> {
     findAllOptions: FindAllOptions<QuerySalesInvoiceDto>,
     pagination?: PaginationDto,
   ): Promise<{ rows: SalesInvoice[]; count: number }> {
+    const { dateRange, timezone, startDate, endDate, ...filters } =
+      findAllOptions.queryDto;
+
+    const where: WhereOptions<SalesInvoice> = { ...filters };
+    const selectedRange = dateRange ?? DateRangeQueryType.TODAY;
+    const rangeTimezone = timezone ?? 'Asia/Jakarta';
+
+    const now = dayjs().tz(rangeTimezone);
+    
+    let start: dayjs.Dayjs;
+    let endExclusive: dayjs.Dayjs;
+
+    if (selectedRange === DateRangeQueryType.LAST_30_DAYS) {
+      start = now.subtract(30, 'day');
+      endExclusive = now;
+    } else if (selectedRange === DateRangeQueryType.CUSTOM) {
+      start = dayjs.tz(startDate!, rangeTimezone).startOf('day');
+      endExclusive = dayjs
+        .tz(endDate!, rangeTimezone)
+        .add(1, 'day')
+        .startOf('day');
+    } else {
+      start = now.startOf('day');
+      endExclusive = start.add(1, 'day');
+    }
+
+    where.createdAt = {
+      [Op.gte]: start.toDate(),
+      [Op.lt]: endExclusive.toDate(),
+    };
+
     return await this.model.findAndCountAll({
       order: [['createdAt', 'desc']],
-      where: {
-        ...findAllOptions.queryDto,
-      },
+      where,
       include: [
         GET_SALESINVOICEITEM_INCLUDE(),
         {
           ...GET_USER_INCLUDE(),
-          as: 'creator'
-        }
+          as: 'creator',
+        },
       ],
       ...(pagination?.getPagination() ?? {}),
     });
   }
 
-  async setStatusCompleted(id: string, user: UserAuthPayload) {
-    const entity = await this.findOne({ id });
+  async setStatusCompleted(id: string, user: UserAuthPayload, storeId: string) {
+    const entity = await this.findOneForStore(id, storeId);
     if (user.role !== UserRole.ADMIN && user.sub !== entity.createdBy) {
       throw new ForbiddenException('Only creator can update this data');
     }
 
-    return await entity.update({ status: SalesInvoiceStatus.COMPLETED })
-  }
-
-  async reportTransaction(query: any) {
-    return this.sequelize.query(`
-      SElECT COUNT(si.total_amount) as totalAmount,
-      FROM 'sales_invoices' si
-    `,)
+    return await entity.update({ status: SalesInvoiceStatus.COMPLETED });
   }
 }

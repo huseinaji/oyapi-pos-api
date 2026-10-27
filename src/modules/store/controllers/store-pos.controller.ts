@@ -12,14 +12,14 @@ import { PointOfsaleService } from '../../point-of-sale/services/point-of-sale.s
 import type { FastifyRequest } from 'fastify';
 import { ApiOperation, ApiParam } from '@nestjs/swagger';
 import { CreateStorePOSDto } from '../dto/create-store-pos.dto';
-import { StoreResourceOwnershipGuard } from '../guards/store-resource-ownership/store-resource-ownership.guard';
+import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 import { PosSessionGuard } from '../guards/pos-session/pos-session.guard';
 import { PosSessionEntry } from '../../point-of-sale/entities/pos-session-entry.entity';
 import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
 import { StoreAccess } from '../utils/decorators/store.decorator';
 import { StoreRole } from '../utils/store.types';
 
-@UseGuards(StoreResourceOwnershipGuard)
+@UseGuards(StoreContextGuard)
 @Controller({ path: 'store/:id/transaction', version: '1' })
 export class StorePOSController {
   constructor(private readonly posService: PointOfsaleService) { }
@@ -45,7 +45,7 @@ export class StorePOSController {
   @UseGuards(PosSessionGuard)
   @Get('sellable-item')
   findAllSellableItem(@Req() req: FastifyRequest) {
-    return this.posService.findAllSellableItem(req['posSession'] as PosSessionEntry);
+    return this.posService.findAllSellableItem(req['posSession'] as PosSessionEntry, req.storeSession.storeId);
   }
 
   @ApiOperation({ summary: 'Delete a sales transaction', description: 'Deletes the sales invoice identified by salesInvoiceId.' })
@@ -66,6 +66,7 @@ export class StorePOSController {
     return this.posService.removeTransaction(
       salesinvoiceId,
       req.user.userPayload,
+      req.storeSession.storeId,
     );
   }
 }

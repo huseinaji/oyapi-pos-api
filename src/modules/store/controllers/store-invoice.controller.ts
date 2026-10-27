@@ -12,9 +12,9 @@ import { ApiOperation, ApiParam } from '@nestjs/swagger';
 import { QuerySalesInvoiceDto } from '../../point-of-sale/dto/query-sales-invoice.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import type { FastifyRequest } from 'fastify';
-import { StoreResourceOwnershipGuard } from '../guards/store-resource-ownership/store-resource-ownership.guard';
+import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 
-@UseGuards(StoreResourceOwnershipGuard)
+@UseGuards(StoreContextGuard)
 @Controller({ path: 'store/:id/invoice', version: '1' })
 export class StoreInvoiceController {
   constructor(private salesInvoiceService: SalesInvoiceService) {}
@@ -29,10 +29,10 @@ export class StoreInvoiceController {
     @Param('salesInvoiceId') salesinvoiceId: string,
     @Req() req: FastifyRequest,
   ) {
-    return this.salesInvoiceService.findOne({
-      id: salesinvoiceId,
-      user: req.user.userPayload,
-    });
+    return this.salesInvoiceService.findOneForStore(
+      salesinvoiceId,
+      req.storeSession.storeId,
+    );
   }
 
   @ApiOperation({ summary: 'List sales invoices', description: 'Returns invoices matching the supplied filters and pagination settings.' })
@@ -68,6 +68,7 @@ export class StoreInvoiceController {
     return this.salesInvoiceService.setStatusCompleted(
       salesinvoiceId,
       req.user.userPayload,
+      req.storeSession.storeId,
     );
   }
 }

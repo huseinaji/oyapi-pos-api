@@ -15,7 +15,6 @@ import { StoreService } from '../store.service';
 import { QueryStoreDto } from '../dto/query-store.dto';
 import {
   BaseSessionPayload,
-  UserAuthPayload,
 } from '../../auth/utils/auth.type';
 import { ApiOperation } from '@nestjs/swagger';
 import { CreateStoreDto } from '../dto/store-dto/create-store.dto';
@@ -145,9 +144,8 @@ export class StoreController {
   })
   @UseGuards(StoreAcessRoleGuard)
   @Get(':id')
-  findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req['user'] as UserAuthPayload;
-    return this.storeService.findOne({ id, user });
+  findOne(@Param('id') id: string) {
+    return this.storeService.findOne(id);
   }
 
   @ApiOperation({
@@ -160,11 +158,9 @@ export class StoreController {
   findAll(
     @Query() query: QueryStoreDto,
     @Query() pagination: PaginationDto = new PaginationDto(),
-    @Req() req: Request,
   ) {
-    const user = req['user'] as UserAuthPayload;
     return this.storeService.findAndCountAll(
-      { queryDto: query, user },
+      { queryDto: query },
       pagination,
     );
   }
@@ -188,7 +184,7 @@ export class StoreController {
   @StoreAccess({ roles: [StoreRole.ADMIN] })
   @UseGuards(StoreAcessRoleGuard)
   async update(@Param('id') id: string, @Body() body: UpdateStoreDto) {
-    return this.storeService.update({ id, updateDto: body });
+    return this.storeService.update(id, body);
   }
 
   @ApiOperation({
@@ -198,7 +194,7 @@ export class StoreController {
   @Roles(UserRole.ADMIN)
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    await this.storeService.remove({ id });
+    await this.storeService.remove(id);
 
     return {
       message: 'success',
