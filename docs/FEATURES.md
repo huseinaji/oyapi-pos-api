@@ -247,6 +247,14 @@ the query DTO.
 | ------ | -------------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
 | `GET`  | `/api/v1/store/:id/stock-ledger` | Authenticated member of selected store | Lists stock movement ledger entries with filters and pagination.     |
 | `GET`  | `/api/v1/store/:id/bins`         | Authenticated member of selected store | Lists store inventory bins and balances with filters and pagination. |
+| `POST` | `/api/v1/store/:id/stock-adjustment` | Authenticated member of selected store | Creates an adjustment and returns its fields with the submitted items. |
+| `GET`  | `/api/v1/store/:id/stock-adjustment` | Authenticated member of selected store | Lists adjustments with their items and item details as `{ count, rows }`. |
+
+Stock-adjustment creation returns the created adjustment (`id`, `storeId`,
+`type`, `remarks`, and timestamps) with an `items` array containing each
+`itemId`, `qty`, and `stockAdjustmentId`. The list response is a Sequelize
+`findAndCountAll` result with `count` and `rows`; each adjustment row includes
+its adjustment items and the nested item summary.
 
 ## Business workflows
 
@@ -307,7 +315,7 @@ the others from being processed.
 | `auth`          | Login/registration, Redis-backed session authentication, global authentication/role/store-selection guards.    |
 | `user`          | User profile data, administration, global roles and statuses; provisions the initial administrator on startup. |
 | `store`         | Store lifecycle, memberships, selected-store API context, store-scoped catalog/stock/POS/invoice controllers.  |
-| `inventory`     | Items, categories, bundle components, bins, and stock-ledger entries.                                          |
+| `inventory`     | Items, categories, bundle components, bins, stock-ledger entries, and stock adjustments.                       |
 | `point-of-sale` | POS sessions, session opening/sold quantities, sales invoices and invoice lines.                               |
 | `health`        | Startup and HTTP health checks for database, Redis, disk, and memory.                                          |
 

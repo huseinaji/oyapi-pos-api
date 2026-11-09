@@ -94,7 +94,7 @@ export class StoreController {
     roles: [StoreRole.ADMIN],
   })
   @UseGuards(StoreAcessRoleGuard)
-  @Post(':id/unassign')
+  @Post(':id/disable')
   unassignMember(
     @Param('id') id: string,
     @Body() data: AssignMmeberStoreDto,

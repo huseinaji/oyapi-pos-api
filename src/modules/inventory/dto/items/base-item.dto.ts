@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsBoolean, IsEnum, IsNumber, IsString } from "class-validator";
 import { ItemStatus, ItemType, ItemUOM } from "../../utils/types/item.type";
+import { Type } from "class-transformer";
 
 export class BaseItemDto {
   @ApiProperty({ type: String, description: 'ID of the store that owns this item', example: 'store_01J8Q2M6K4N7P9R3T5V0W1X2YZ' })
@@ -40,6 +41,7 @@ export class BaseItemDto {
   sellingPrice: number;
 
   @ApiProperty({ type: Boolean, description: 'Whether stock quantities are tracked for this item', example: true })
+  @Type(() => Boolean)
   @IsBoolean()
   isMaintainStock: boolean;
 }

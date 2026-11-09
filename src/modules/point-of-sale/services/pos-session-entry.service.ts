@@ -264,7 +264,7 @@ export class PosSessionEntryService {
 
       const currentSession = await this.getSessionByStore(storeId);
 
-      if (!currentSession) throw new NotFoundException('Session not found');
+      if (!currentSession) throw new NotFoundException(`Session not found for storeId ${storeId}`);
 
       if (currentSession.status !== PosSessionEntryStatus.ACTIVE) {
         throw new ConflictException('POS session is already closed');
@@ -273,14 +273,16 @@ export class PosSessionEntryService {
       await Promise.all(
         currentSession.items.map(async m => {
           if (m.soldQty === 0) return;
-          await this.stockLedgerEntryService.create({ createDto: {
-            itemId: m.itemId,
-            qty: m.soldQty,
-            ledgerDirection: LedgerDirection.OUT,
-            storeId,
-            reference: LedgerReference.POS_SESSION,
-            referenceId: currentSession.id
-          }}, tx);
+          await this.stockLedgerEntryService.create({
+            createDto: {
+              itemId: m.itemId,
+              qty: m.soldQty,
+              ledgerDirection: LedgerDirection.OUT,
+              storeId,
+              reference: LedgerReference.POS_SESSION,
+              referenceId: currentSession.id
+            }
+          }, tx);
         })
       )
       currentSession.closedBy = closedBy;

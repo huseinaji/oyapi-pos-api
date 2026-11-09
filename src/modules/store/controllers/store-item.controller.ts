@@ -122,7 +122,7 @@ export class StoreItemController {
   findAll(
     @Query() query: QueryItemDto,
     @Req() req: FastifyRequest,
-    @Query() pagination: PaginationDto = new PaginationDto(),
+    @Query() pagination: PaginationDto,
   ) {
     return this.itemService.findAndCountAll(
       {
