@@ -48,12 +48,12 @@ async function bootstrap() {
 
   await fastify.register(fastifySession, {
     secret: GET_ENV_VARIABLE('SESSION_SECRET'),
-    store: sessionStore,
     cookie: {
       httpOnly: true,
       secure: !IS_PROD ? false : true, // true kalau production + HTTPS
       sameSite: 'lax',
       path: '/',
+      maxAge: 24 * 60 * 1000, // 24 hours
     },
   });
 

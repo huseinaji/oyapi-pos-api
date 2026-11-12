@@ -11,11 +11,13 @@ import { DB_CONFIG } from './infrastructure/database/config/database.config';
 import { StoreModule } from './modules/store/store.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { RedisProviderModule } from './infrastructure/redis-provider/redis-provider.module';
+import { S3ProviderModule } from './infrastructure/s3-provider/s3-provider.module';
 import { WinstonModule } from 'nest-winston';
 import { WinstonConfig } from './common/config/winston.config';
 import { HttpExceptionFilter } from './common/utils/http-exception.filter';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { FileStorageModule } from './modules/file-storage/file-storage.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     InventoryModule,
     StoreModule,
     RedisProviderModule,
+    S3ProviderModule,
+    FileStorageModule,
   ],
   providers: [
     {

@@ -174,6 +174,25 @@ store-role checks to its restricted routes.
 currently has no HTTP method/path decorator, so no store-update route is
 registered.
 
+### File storage — `/api/v1/file-storage`
+
+All routes require an authenticated session and do not require a selected
+store. The service scopes list, read, update, and delete queries to the
+authenticated user's ID. `userId` is assigned by the API on creation and
+cannot be changed through these routes. The database sets `userId` to null
+when a user row is physically deleted; the current user API soft-deletes user
+rows, so that foreign-key action does not run for its normal delete route.
+These endpoints manage metadata only; they do not upload or delete the file
+bytes referenced by `objectKey`.
+
+| Method   | Path                            | Access              | Behavior                                                        |
+| -------- | ------------------------------- | ------------------- | --------------------------------------------------------------- |
+| `POST`   | `/api/v1/file-storage`          | Authenticated user  | Creates file metadata for the current user.                    |
+| `GET`    | `/api/v1/file-storage`          | Authenticated user  | Lists the current user's file metadata with filters/pagination. |
+| `GET`    | `/api/v1/file-storage/:id`      | Authenticated owner | Returns one of the current user's records.                     |
+| `PATCH`  | `/api/v1/file-storage/:id`      | Authenticated owner | Updates one of the current user's records.                     |
+| `DELETE` | `/api/v1/file-storage/:id`      | Authenticated owner | Deletes one of the current user's records.                     |
+
 ### Store catalog and categories — `/api/v1/store/:id/items`
 
 `StoreContextGuard` applies to this controller and verifies the selected store
@@ -316,6 +335,7 @@ the others from being processed.
 | `user`          | User profile data, administration, global roles and statuses; provisions the initial administrator on startup. |
 | `store`         | Store lifecycle, memberships, selected-store API context, store-scoped catalog/stock/POS/invoice controllers.  |
 | `inventory`     | Items, categories, bundle components, bins, stock-ledger entries, and stock adjustments.                       |
+| `file-storage`  | Authenticated, user-scoped file metadata management; file bytes are stored externally.                           |
 | `point-of-sale` | POS sessions, session opening/sold quantities, sales invoices and invoice lines.                               |
 | `health`        | Startup and HTTP health checks for database, Redis, disk, and memory.                                          |
 
