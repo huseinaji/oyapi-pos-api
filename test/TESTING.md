@@ -37,7 +37,7 @@ gagal karena prasyarat fixture belum ada.
 4. **Stores dan memberships** — membuat dua store terisolasi (utama dan foreign),
    menambahkan user sebagai member, memilih store, lalu menguji daftar member,
    update role langsung melalui `storeId` tanpa memilih store terlebih dahulu
-   untuk global admin, akses foreign-store, unassign, dan re-assign.
+   untuk global admin, akses foreign-store, disable, dan re-assign.
 5. **Inventory** — membuat item global dan item store (produk, bahan baku,
    bundle, serta item disposable); menguji list/detail, update/delete, kategori,
    serta batas ownership saat membaca, mengubah, menghapus item, atau menambah
@@ -51,7 +51,8 @@ gagal karena prasyarat fixture belum ada.
    rolling last 30 days dengan timezone, custom tanggal inklusif dengan timezone,
    serta validasi rentang custom dan kewajiban timezone; juga
    menguji detail/complete invoice, menolak pembacaan atau penyelesaian invoice
-   foreign, menguji penghapusan invoice, serta membaca stock ledger dan bins.
+   foreign, menguji penghapusan invoice, serta membaca stock ledger, bins, dan
+   stock adjustments.
 8. **Cleanup** — menghapus invoice fixtures, item (termasuk bundle yang
    menghapus component melalui cascade), kategori, dan item global; menonaktifkan
    membership fixture; lalu menghapus store. User hasil registrasi juga dihapus

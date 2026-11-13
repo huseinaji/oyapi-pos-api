@@ -260,9 +260,9 @@ describe('Live API E2E', () => {
       if (!userId) continue;
       await attempt(async () => {
         const response = await admin
-          .post(`/api/v1/store/${store}/unassign`)
+          .post(`/api/v1/store/${store}/disable`)
           .send({ userId });
-        coveredOperations.add('POST /api/v1/store/{id}/unassign');
+        coveredOperations.add('POST /api/v1/store/{id}/disable');
         if (
           response.status !== 201 &&
           (requireExisting || response.status !== 404)
@@ -655,7 +655,7 @@ describe('Live API E2E', () => {
         `/api/v1/store/${storeId}/assign`,
         201,
         'POST /api/v1/store/{id}/assign',
-        { userId: cashierId },
+        { userId: cashierId, role: 'cashier' },
       );
       await hit(
         admin,
@@ -663,7 +663,7 @@ describe('Live API E2E', () => {
         `/api/v1/store/${storeId}/assign`,
         422,
         'POST /api/v1/store/{id}/assign',
-        { userId: cashierId },
+        { userId: cashierId, role: 'cashier' },
       );
       await hit(
         cashier,
@@ -671,7 +671,7 @@ describe('Live API E2E', () => {
         `/api/v1/store/${storeId}/assign`,
         403,
         'POST /api/v1/store/{id}/assign',
-        { userId: cashierId },
+        { userId: cashierId, role: 'cashier' },
       );
     });
 
@@ -720,8 +720,18 @@ describe('Live API E2E', () => {
         cashier,
         'POST',
         `/api/v1/store/${foreignStoreId}/select`,
-        404,
+        403,
         'POST /api/v1/store/{id}/select',
+      );
+    });
+
+    it('store-scoped endpoints reject a URL store different from the selected store', async () => {
+      await hit(
+        admin,
+        'GET',
+        `/api/v1/store/${foreignStoreId}/items/categories`,
+        400,
+        'GET /api/v1/store/{id}/items/categories',
       );
     });
 
@@ -766,14 +776,28 @@ describe('Live API E2E', () => {
       );
     });
 
-    it('POST /store/:id/unassign inactivates membership and assign reactivates it', async () => {
+    it('POST /store/:id/disable inactivates membership and assign reactivates it', async () => {
       await hit(
         admin,
         'POST',
-        `/api/v1/store/${storeId}/unassign`,
+        `/api/v1/store/${storeId}/disable`,
         201,
-        'POST /api/v1/store/{id}/unassign',
+        'POST /api/v1/store/{id}/disable',
         { userId: cashierId },
+      );
+      await hit(
+        cashier,
+        'GET',
+        `/api/v1/store/${storeId}/items/categories`,
+        403,
+        'GET /api/v1/store/{id}/items/categories',
+      );
+      await hit(
+        cashier,
+        'POST',
+        `/api/v1/store/${storeId}/select`,
+        403,
+        'POST /api/v1/store/{id}/select',
       );
       await hit(
         admin,
@@ -781,7 +805,14 @@ describe('Live API E2E', () => {
         `/api/v1/store/${storeId}/assign`,
         201,
         'POST /api/v1/store/{id}/assign',
-        { userId: cashierId },
+        { userId: cashierId, role: 'cashier' },
+      );
+      await hit(
+        cashier,
+        'GET',
+        `/api/v1/store/${storeId}/items/categories`,
+        200,
+        'GET /api/v1/store/{id}/items/categories',
       );
     });
   });
@@ -1409,6 +1440,18 @@ describe('Live API E2E', () => {
     });
   });
 
+  describe('User module / UserPublicController', () => {
+    it('GET /user-list finds matching users', async () => {
+      await hit(
+        admin,
+        'GET',
+        `/api/v1/user-list?username=${encodeURIComponent(prefix)}`,
+        200,
+        'GET /api/v1/user-list',
+      );
+    });
+  });
+
   describe('Store module / StoreStockController', () => {
     it('GET /store/:id/stock-ledger returns store-scoped stock movements', async () => {
       await hit(
@@ -1427,6 +1470,24 @@ describe('Live API E2E', () => {
         `/api/v1/store/${storeId}/bins`,
         200,
         'GET /api/v1/store/{id}/bins',
+      );
+    });
+
+    it('POST /store/:id/stock-adjustment validates items and GET lists adjustments', async () => {
+      await hit(
+        admin,
+        'POST',
+        `/api/v1/store/${storeId}/stock-adjustment`,
+        400,
+        'POST /api/v1/store/{id}/stock-adjustment',
+        { type: 'receive', items: [] },
+      );
+      await hit(
+        admin,
+        'GET',
+        `/api/v1/store/${storeId}/stock-adjustment`,
+        200,
+        'GET /api/v1/store/{id}/stock-adjustment',
       );
     });
   });

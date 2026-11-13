@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiOkResponse,
@@ -11,21 +19,27 @@ import { StockLedgerEntryService } from '../../inventory/services/stock-ledger-e
 import { BinService } from '../../inventory/services/bin.service';
 import { QueryStockLedgerEntryDto } from '../../inventory/dto/stock-ledger-entry/query-stockledgerentry.dto';
 import { QueryBinDto } from '../../inventory/dto/bin/query-bin.dto';
-import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 import { StockAdjustmentService } from '../../inventory/services/stock-adjustment.service';
 import { CreateStockAdjustmentDto } from '../../inventory/dto/stock-adjustment/create-stock-adjustment.dto';
-import { BaseStockAdjustmentDto } from '../../inventory/dto/stock-adjustment/base-stock-adjustment.dto';
+import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
+import { StoreAccess } from '../utils/decorators/store.decorator';
+import { StoreRole } from '../utils/store.types';
 
-@UseGuards(StoreContextGuard)
+@UseGuards(StoreAcessRoleGuard)
+@StoreAccess({ roles: [StoreRole.ADMIN] })
 @Controller({ path: 'store/:id', version: '1' })
 export class StoreStockController {
   constructor(
     private stockLedgerEntryService: StockLedgerEntryService,
     private binService: BinService,
     private stockAdjusmentService: StockAdjustmentService,
-  ) { }
+  ) {}
 
-  @ApiOperation({ summary: 'List stock ledger entries', description: 'Returns stock movements for the current store, with optional filters and pagination.' })
+  @ApiOperation({
+    summary: 'List stock ledger entries',
+    description:
+      'Returns stock movements for the current store, with optional filters and pagination.',
+  })
   @ApiParam({
     name: 'id',
     description: 'ID of the store whose stock movements are requested.',
@@ -44,7 +58,11 @@ export class StoreStockController {
     );
   }
 
-  @ApiOperation({ summary: 'List store bins', description: 'Returns inventory bin balances for the current store, with optional filters and pagination.' })
+  @ApiOperation({
+    summary: 'List store bins',
+    description:
+      'Returns inventory bin balances for the current store, with optional filters and pagination.',
+  })
   @ApiParam({
     name: 'id',
     description: 'ID of the store whose bins are requested.',
@@ -150,13 +168,11 @@ export class StoreStockController {
     },
   })
   @Get('stock-adjustment')
-  async getAllStockAdjustment(
-    @Req() req: FastifyRequest,
-  ) {
+  async getAllStockAdjustment(@Req() req: FastifyRequest) {
     const storeId = req.storeSession.storeId;
 
     return this.stockAdjusmentService.findAndCountAll({
-      storeId
-    })
+      storeId,
+    });
   }
 }

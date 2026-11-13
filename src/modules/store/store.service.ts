@@ -180,19 +180,6 @@ export class StoreService extends BaseService<Store> {
     });
   }
 
-  async selectStore(id: string, user: UserAuthPayload) {
-    const storeData = await this.findOne(id);
-    const userMember = await this.getMemberData(id, user.sub);
-
-    if (!userMember)
-      throw new NotFoundException('You are not member of this store');
-
-    return {
-      store: storeData.get({ plain: true }),
-      role: userMember.role,
-    };
-  }
-
   getMyStore(userContext: UserAuthPayload, pagination?: PaginationDto) {
     return this.model.findAndCountAll({
       include: [

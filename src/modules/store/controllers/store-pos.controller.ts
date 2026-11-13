@@ -12,14 +12,13 @@ import { PointOfsaleService } from '../../point-of-sale/services/point-of-sale.s
 import type { FastifyRequest } from 'fastify';
 import { ApiOperation, ApiParam } from '@nestjs/swagger';
 import { CreateStorePOSDto } from '../dto/create-store-pos.dto';
-import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 import { PosSessionGuard } from '../guards/pos-session/pos-session.guard';
 import { PosSessionEntry } from '../../point-of-sale/entities/pos-session-entry.entity';
 import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
 import { StoreAccess } from '../utils/decorators/store.decorator';
 import { StoreRole } from '../utils/store.types';
 
-@UseGuards(StoreContextGuard)
+@UseGuards(StoreAcessRoleGuard)
 @Controller({ path: 'store/:id/transaction', version: '1' })
 export class StorePOSController {
   constructor(private readonly posService: PointOfsaleService) { }
@@ -52,7 +51,6 @@ export class StorePOSController {
   @StoreAccess({
     roles: [StoreRole.ADMIN]
   })
-  @UseGuards(StoreAcessRoleGuard)
   @ApiParam({
     name: 'salesInvoiceId',
     description: 'ID of the sales invoice to delete.',
