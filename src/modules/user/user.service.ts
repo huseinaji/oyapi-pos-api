@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { User } from './entities/user.entity';
@@ -14,8 +19,8 @@ import { GET_STORE_INCLUDE } from '../store/utils/store.include';
 
 @Injectable()
 export class UserService implements OnModuleInit {
-  private logger = new Logger(UserService.name)
-  constructor(@InjectModel(User) private readonly model: typeof User) { }
+  private logger = new Logger(UserService.name);
+  constructor(@InjectModel(User) private readonly model: typeof User) {}
 
   create(createUserDto: CreateUserDto): Promise<User> {
     return this.model.create({ ...createUserDto } as any);
@@ -28,12 +33,27 @@ export class UserService implements OnModuleInit {
         {
           ...GET_STORE_MEMBER_INCLUDE(),
           limit: 3,
-          include: [
-            GET_STORE_INCLUDE()
-          ]
+          include: [GET_STORE_INCLUDE()],
         },
       ],
       ...(pagination?.getPagination() ?? {}),
+    });
+  }
+
+  /**
+   * get user by username limit only 5 and min keywoard 3
+   */
+  getUsernameList(keyword: string) {
+    return this.model.findAll({
+      where: {
+        username: {
+          [Op.and]: [
+            { [Op.like]: `%${keyword}%` },
+            { [Op.ne]: 'administrator' },
+          ],
+        },
+      },
+      limit: 5,
     });
   }
 
@@ -51,10 +71,8 @@ export class UserService implements OnModuleInit {
       include: [
         {
           ...GET_STORE_MEMBER_INCLUDE(),
-          include: [
-            GET_STORE_INCLUDE()
-          ]
-        }
+          include: [GET_STORE_INCLUDE()],
+        },
       ],
     });
     if (!user) {
@@ -70,11 +88,14 @@ export class UserService implements OnModuleInit {
   }
 
   setUserLogin(id: string) {
-    return this.model.update({
-      lastLogin: Date.now(),
-    }, {
-      where: { id }
-    })
+    return this.model.update(
+      {
+        lastLogin: Date.now(),
+      },
+      {
+        where: { id },
+      },
+    );
   }
 
   async remove(id: string): Promise<void> {
@@ -100,7 +121,7 @@ export class UserService implements OnModuleInit {
 
     if (existingUser) {
       this.logger.debug('Admin has been created');
-      return
+      return;
     }
     return await this.model.create({ ...userData }, { ignoreDuplicates: true });
   }

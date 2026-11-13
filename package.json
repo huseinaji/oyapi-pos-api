@@ -18,6 +18,7 @@
     "test:cov": "bun test --coverage",
     "test:debug": "bun --inspect-brk ./node_modules/jest/bin/jest.js --runInBand",
     "test:e2e": "bun ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
+    "test:e2e:api": "node ./node_modules/jest/bin/jest.js --config ./test/jest-api-e2e.json --runInBand",
     "migrate": "bun ./node_modules/sequelize-cli/lib/sequelize db:migrate",
     "migrate:undo": "bun ./node_modules/sequelize-cli/lib/sequelize db:migrate:undo"
   },
@@ -44,6 +45,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
+    "dayjs": "^1.11.23",
     "fastify-session-redis-store": "^7.1.2",
     "ioredis": "^5.11.1",
     "mysql2": "^3.24.3",

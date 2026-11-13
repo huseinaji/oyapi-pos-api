@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsPhoneNumber, IsString } from "class-validator";
-import { StoreStatus } from "../utils/store.types";
+import { StoreStatus } from "../../utils/store.types";
 
 export class BaseStoreDto {
   @ApiProperty({ type: String, description: 'Store display name', example: 'Central Market' })

@@ -2,6 +2,8 @@
 
 Backend aplikasi point of sale yang dibuat pakai NestJS, TypeScript, dan Bun. API ini memakai PostgreSQL untuk database dan Redis untuk session serta queue.
 
+Panduan fitur, endpoint, guard, dan alur bisnis ada di [docs/FEATURES.md](docs/FEATURES.md). Panduan tersebut juga menjadi titik awal untuk AI coding agents; lihat [AGENTS.md](AGENTS.md).
+
 ## Yang dipakai
 
 - NestJS 12 dengan Fastify

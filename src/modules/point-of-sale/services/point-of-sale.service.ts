@@ -50,6 +50,7 @@ export class PointOfsaleService {
 
       const invoiceItems = await this.salesInvoiceItemService.generateFromSI(
         invoice.id,
+        data.storeId,
         items,
         data.posSessionId,
         tx,
@@ -62,7 +63,7 @@ export class PointOfsaleService {
     });
   }
 
-  async findAllSellableItem(posSession: PosSessionEntry) {
+  async findAllSellableItem(posSession: PosSessionEntry, storeId: string) {
     //check store session
     // ambil semua store session item
     // untuk item finished good, ambil semua item finished good dan item component
@@ -70,7 +71,7 @@ export class PointOfsaleService {
     // ambil finished good yang opening qty ada di store session
     const storeSessionItem = posSession.items;
 
-    const items = await this.itemService.findAllSellableItem();
+    const items = await this.itemService.findAllSellableItem(storeId);
 
     const result = this.mapSessionItemWithInventoryItem(storeSessionItem, items);
 
@@ -157,19 +158,23 @@ export class PointOfsaleService {
     return result;
   }
 
-  async findByInvoice(invoiceId: string, user: UserAuthPayload) {
-    await this.salesInvoiceService.findOne({ id: invoiceId, user });
-  }
-
-  async removeTransaction(siId: string, user: UserAuthPayload) {
+  async removeTransaction(
+    siId: string,
+    user: UserAuthPayload,
+    storeId: string,
+  ) {
     return this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
 
-      const invoice = await this.salesInvoiceService.findOne({ id: siId }, tx);
+      const invoice = await this.salesInvoiceService.findOneForStore(
+        siId,
+        storeId,
+        tx,
+      );
 
-      invoice.deletedAt = Date.now();
       invoice.updatedBy = user.sub;
       await invoice.save(tx);
+      await invoice.destroy(tx);
     });
   }
 }

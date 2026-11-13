@@ -107,6 +107,7 @@ export class SalesInvoiceItemService extends BaseService<SalesInvoiceItem> {
 
   async generateFromSI(
     invoiceId: string,
+    storeId: string,
     items: CreateSalesInvoiceItemDto[],
     sessionId: string,
     options?: TxOptions,
@@ -114,8 +115,9 @@ export class SalesInvoiceItemService extends BaseService<SalesInvoiceItem> {
     const stockRequirements = new Map<string, PosSessionStockRequirement>();
     const records = await Promise.all(
       items.map(async (item) => {
-        const itemData = await this.itemService.findOne(
+        const itemData = await this.itemService.findOneForStore(
           item.itemId,
+          storeId,
           options
         );
 

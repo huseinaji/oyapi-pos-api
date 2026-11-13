@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -12,22 +13,23 @@ import {
 } from '@nestjs/common';
 import { StoreService } from '../store.service';
 import { QueryStoreDto } from '../dto/query-store.dto';
-import {
-  BaseSessionPayload,
-  UserAuthPayload,
-} from '../../auth/utils/auth.type';
+import { BaseSessionPayload } from '../../auth/utils/auth.type';
 import { ApiOperation } from '@nestjs/swagger';
-import { CreateStoreDto } from '../dto/create-store.dto';
+import { CreateStoreDto } from '../dto/store-dto/create-store.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { Roles, SessionFree } from '../../../common/decorator/decorator';
 import { UserRole } from '../../user/utils/user.types';
-import { AssignMmeberStoreDto } from '../dto/assign-member.dto';
+import {
+  AssignMmeberStoreDto,
+  DisableMemberStoreDto,
+} from '../dto/assign-member.dto';
 import { StoreAccess } from '../utils/decorators/store.decorator';
 import { StoreRole } from '../utils/store.types';
 import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
 import { UpdateStoreDto } from '../dto/update-store.dto';
 import type { FastifySessionObject } from '@fastify/session';
 import type { FastifyRequest } from 'fastify';
+import { UpdateStoreMemberDto } from '../dto/store-member-dto/update-store-member.dto';
 
 @SessionFree()
 @Controller({ path: 'store', version: '1' })
@@ -86,19 +88,15 @@ export class StoreController {
 
   @ApiOperation({
     summary: 'Inactivate a store member',
-    description:
-      'Requires the store administrator role.',
+    description: 'Requires the store administrator role.',
   })
   @StoreAccess({
     roles: [StoreRole.ADMIN],
   })
   @UseGuards(StoreAcessRoleGuard)
-  @Post(':id/unassign')
-  unassignMember(
-    @Param('id') id: string,
-    @Body() data: AssignMmeberStoreDto,
-  ) {
-    return this.storeService.inactiveMember(id, data.userId);
+  @Post(':id/disable')
+  unassignMember(@Param('id') id: string, @Body() data: DisableMemberStoreDto) {
+    return this.storeService.inactivateMember(id, data.userId);
   }
 
   @ApiOperation({
@@ -115,6 +113,25 @@ export class StoreController {
   }
 
   @ApiOperation({
+    summary: 'Edit store members',
+  })
+  @StoreAccess({
+    roles: [StoreRole.ADMIN],
+  })
+  @UseGuards(StoreAcessRoleGuard)
+  @Patch(':id/members/:memberId')
+  async editStoreMember(
+    @Param('id') storeId: string,
+    @Param('memberId') memberId: string,
+    @Body() data: UpdateStoreMemberDto,
+  ) {
+    await this.storeService.updateMember(memberId, storeId, data);
+    return {
+      message: 'success',
+    };
+  }
+
+  @ApiOperation({
     summary: 'Get a store',
     description:
       'Returns the specified store when the current user has access to it.',
@@ -124,9 +141,8 @@ export class StoreController {
   })
   @UseGuards(StoreAcessRoleGuard)
   @Get(':id')
-  findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req['user'] as UserAuthPayload;
-    return this.storeService.findOne({ id, user });
+  findOne(@Param('id') id: string) {
+    return this.storeService.findOne(id);
   }
 
   @ApiOperation({
@@ -139,13 +155,8 @@ export class StoreController {
   findAll(
     @Query() query: QueryStoreDto,
     @Query() pagination: PaginationDto = new PaginationDto(),
-    @Req() req: Request,
   ) {
-    const user = req['user'] as UserAuthPayload;
-    return this.storeService.findAndCountAll(
-      { queryDto: query, user },
-      pagination,
-    );
+    return this.storeService.findAndCountAll({ queryDto: query }, pagination);
   }
 
   @ApiOperation({
@@ -167,7 +178,7 @@ export class StoreController {
   @StoreAccess({ roles: [StoreRole.ADMIN] })
   @UseGuards(StoreAcessRoleGuard)
   async update(@Param('id') id: string, @Body() body: UpdateStoreDto) {
-    return this.storeService.update({ id, updateDto: body });
+    return this.storeService.update(id, body);
   }
 
   @ApiOperation({
@@ -177,7 +188,7 @@ export class StoreController {
   @Roles(UserRole.ADMIN)
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    await this.storeService.remove({ id });
+    await this.storeService.remove(id);
 
     return {
       message: 'success',

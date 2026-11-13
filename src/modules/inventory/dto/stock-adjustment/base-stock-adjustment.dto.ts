@@ -7,6 +7,10 @@ export class BaseStockAdjustmentDto {
   id: string;
 
   @ApiProperty()
+  @IsString()
+  storeId: string;
+
+  @ApiProperty()
   @IsEnum(StockAdjustmentType)
   type: StockAdjustmentType;
 

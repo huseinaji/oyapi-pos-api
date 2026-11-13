@@ -39,9 +39,9 @@ export class ItemService {
     private sequelize: Sequelize,
   ) {}
 
-  private validateExisting(entity: Item | null) {
+  private validateExisting(entity: Item | null, id?: string) {
     if (!entity) {
-      throw new NotFoundException('Item not found');
+      throw new NotFoundException(`Item ${id} not found`);
     }
     return entity;
   }
@@ -193,14 +193,36 @@ export class ItemService {
       ...options,
     });
 
-    return this.validateExisting(result);
+    return this.validateExisting(result, id);
   }
 
-  findAllSellableItem() {
+  async findOneForStore(
+    id: string,
+    storeId: string,
+    options?: FindOptions,
+  ): Promise<Item> {
+    const result = await this.model.findOne({
+      ...options,
+      where: { id, storeId },
+      include: [
+        GET_BIN_INCLUDE(),
+        GET_ITEM_CATEGORY_INCLUDE(),
+        {
+          ...GET_ITEMBUNDLECOMPONENT_INCLUDE(),
+          as: 'itemComponents',
+        },
+      ],
+    });
+
+    return this.validateExisting(result, id);
+  }
+
+  findAllSellableItem(storeId: string) {
     return this.model.findAll({
       where: {
         type: { [Op.ne]: ItemType.RAW_MATERIAL },
         status: ItemStatus.ACTIVE,
+        storeId
       },
       include: [GET_ITEMBUNDLECOMPONENT_INCLUDE()],
     });
@@ -208,7 +230,15 @@ export class ItemService {
 
   async update(id: string, data: UpdateItemDto) {
     const currentData = await this.findOne(id);
+    return this.updateItem(currentData, data);
+  }
 
+  async updateForStore(id: string, storeId: string, data: UpdateItemDto) {
+    const currentData = await this.findOneForStore(id, storeId);
+    return this.updateItem(currentData, data);
+  }
+
+  private async updateItem(currentData: Item, data: UpdateItemDto) {
     const statusIsChanging =
       data.status !== undefined && data.status !== currentData.status;
 
@@ -226,7 +256,15 @@ export class ItemService {
 
   async remove(id: string) {
     const currentData = await this.findOne(id);
+    return this.removeItem(currentData);
+  }
 
+  async removeForStore(id: string, storeId: string) {
+    const currentData = await this.findOneForStore(id, storeId);
+    return this.removeItem(currentData);
+  }
+
+  private async removeItem(currentData: Item) {
     if (currentData.type === ItemType.RAW_MATERIAL) {
       await this.validateDeleteItemBundleComponentUsed(currentData);
     }

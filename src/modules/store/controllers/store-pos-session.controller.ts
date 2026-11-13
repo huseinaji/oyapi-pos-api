@@ -8,7 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { StoreResourceOwnershipGuard } from '../guards/store-resource-ownership/store-resource-ownership.guard';
+import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 import { ApiOperation, ApiParam } from '@nestjs/swagger';
 import { PosSessionEntryService } from '../../point-of-sale/services/pos-session-entry.service';
 import type { FastifyRequest } from 'fastify';
@@ -18,7 +18,7 @@ import { QueryPosSessionEntryDto } from '../../point-of-sale/dto/query-pos-sessi
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PosSessionGuard } from '../guards/pos-session/pos-session.guard';
 
-@UseGuards(StoreResourceOwnershipGuard)
+@UseGuards(StoreContextGuard)
 @Controller({ path: 'store/:id/pos-session', version: '1' })
 export class StorePosSessionController {
   constructor(private posSessionService: PosSessionEntryService) { }

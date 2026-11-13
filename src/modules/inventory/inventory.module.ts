@@ -11,6 +11,9 @@ import { ItemCategory } from './entities/item-category.entity';
 import { ItemCategoryService } from './services/item-category.service';
 import { ItemBundleComponent } from './entities/item-bundle-component.entity';
 import { ItemBundleComponentService } from './services/item-bundle-component.service';
+import { StockAdjustmentService } from './services/stock-adjustment.service';
+import { StockAdjustment } from './entities/stock-adjustment.entity';
+import { StockAdjustmentItem } from './entities/stock-adjustment-item.entity';
 
 @Module({
   imports: [
@@ -20,6 +23,8 @@ import { ItemBundleComponentService } from './services/item-bundle-component.ser
       StockLedgerEntry,
       ItemCategory,
       ItemBundleComponent,
+      StockAdjustment,
+      StockAdjustmentItem,
     ]),
   ],
   controllers: [ItemController],
@@ -29,6 +34,7 @@ import { ItemBundleComponentService } from './services/item-bundle-component.ser
     BinService,
     ItemCategoryService,
     ItemBundleComponentService,
+    StockAdjustmentService,
   ],
   exports: [
     ItemService,
@@ -36,6 +42,7 @@ import { ItemBundleComponentService } from './services/item-bundle-component.ser
     BinService,
     ItemCategoryService,
     ItemBundleComponentService,
+    StockAdjustmentService,
   ],
 })
 export class InventoryModule {}

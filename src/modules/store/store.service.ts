@@ -10,10 +10,7 @@ import {
   FindAllOptions,
   TxOptions,
 } from '../../common/base/base.service';
-import type {
-  CreateOptions,
-  FindOneOptions,
-} from '../../common/base/base.service';
+import type { CreateOptions } from '../../common/base/base.service';
 import { Store } from './entities/store.entity';
 import { InjectModel } from '@nestjs/sequelize';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -21,7 +18,7 @@ import { GET_ENV_VARIABLE } from '../../common/utils';
 import { StoreMember } from './entities/store-member.entity';
 import { StoreMemberStatus, StoreRole, StoreStatus } from './utils/store.types';
 import { Sequelize } from 'sequelize-typescript';
-import { CreateStoreDto } from './dto/create-store.dto';
+import { CreateStoreDto } from './dto/store-dto/create-store.dto';
 import type { UserAuthPayload } from '../auth/utils/auth.type';
 import { HandleSequelizeErrors } from '../../common/decorator/db-err-handler';
 import { GET_USER_INCLUDE } from '../user/utils/user.include';
@@ -30,6 +27,7 @@ import { GET_STORE_MEMBER_INCLUDE } from './utils/store-member.include';
 import { FindOptions, Op } from 'sequelize';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PosSessionEntryService } from '../point-of-sale/services/pos-session-entry.service';
+import { BaseStoreMemberDto } from './dto/store-member-dto/base-store-member.dto';
 
 @Injectable()
 export class StoreService extends BaseService<Store> {
@@ -110,10 +108,10 @@ export class StoreService extends BaseService<Store> {
 
       if (member) {
         if (member.status === StoreMemberStatus.INACTIVE) {
-          member.status = StoreMemberStatus.ACTIVE
+          member.status = StoreMemberStatus.ACTIVE;
           await member.save(tx);
-          
-          return member
+
+          return member;
         }
 
         throw new UnprocessableEntityException(
@@ -129,8 +127,28 @@ export class StoreService extends BaseService<Store> {
     });
   }
 
+  async updateMember(
+    memberId: string,
+    storeId: string,
+    data: Partial<Omit<BaseStoreMemberDto, 'storeId'>>,
+  ) {
+    return this.sequelize.transaction(async (t) => {
+      const tx = { transaction: t };
+
+      const memberData = await this.storeMemberModel.findOne({
+        where: { id: memberId, storeId },
+        lock: t.LOCK.UPDATE,
+        ...tx,
+      });
+
+      if (!memberData) throw new NotFoundException('Member data not found');
+
+      return memberData.update(data, tx);
+    });
+  }
+
   @HandleSequelizeErrors()
-  async inactiveMember(id: string, userId: string) {
+  async inactivateMember(id: string, userId: string) {
     return this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
 
@@ -142,7 +160,7 @@ export class StoreService extends BaseService<Store> {
       member.status = StoreMemberStatus.INACTIVE;
       await member.save(tx);
       return member;
-    })
+    });
   }
 
   async getMembers(id: string) {
@@ -163,7 +181,7 @@ export class StoreService extends BaseService<Store> {
   }
 
   async selectStore(id: string, user: UserAuthPayload) {
-    const storeData = await this.findOne({ id });
+    const storeData = await this.findOne(id);
     const userMember = await this.getMemberData(id, user.sub);
 
     if (!userMember)
@@ -183,7 +201,7 @@ export class StoreService extends BaseService<Store> {
           required: true,
           where: {
             userId: userContext.sub,
-            status: StoreMemberStatus.ACTIVE
+            status: StoreMemberStatus.ACTIVE,
           },
         },
       ],
@@ -191,12 +209,9 @@ export class StoreService extends BaseService<Store> {
     });
   }
 
-  async findOne(
-    findOneOptions: FindOneOptions,
-    options?: FindOptions,
-  ): Promise<Store> {
+  async findOne(id: string, options?: FindOptions): Promise<Store> {
     const result = await this.model.findOne({
-      where: { id: findOneOptions.id },
+      where: { id },
       include: [
         GET_USER_INCLUDE(),
         {
@@ -260,7 +275,7 @@ export class StoreService extends BaseService<Store> {
     });
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { timeZone: 'Asia/Jakarta' } )
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { timeZone: 'Asia/Jakarta' })
   protected async cronMidnight() {
     await this.autocloseSession();
   }
