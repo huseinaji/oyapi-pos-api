@@ -148,7 +148,7 @@ export class StoreService extends BaseService<Store> {
   }
 
   @HandleSequelizeErrors()
-  async inactiveMember(id: string, userId: string) {
+  async inactivateMember(id: string, userId: string) {
     return this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
 
@@ -209,10 +209,7 @@ export class StoreService extends BaseService<Store> {
     });
   }
 
-  async findOne(
-    id: string,
-    options?: FindOptions,
-  ): Promise<Store> {
+  async findOne(id: string, options?: FindOptions): Promise<Store> {
     const result = await this.model.findOne({
       where: { id },
       include: [

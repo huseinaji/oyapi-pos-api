@@ -13,15 +13,16 @@ import {
 } from '@nestjs/common';
 import { StoreService } from '../store.service';
 import { QueryStoreDto } from '../dto/query-store.dto';
-import {
-  BaseSessionPayload,
-} from '../../auth/utils/auth.type';
+import { BaseSessionPayload } from '../../auth/utils/auth.type';
 import { ApiOperation } from '@nestjs/swagger';
 import { CreateStoreDto } from '../dto/store-dto/create-store.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { Roles, SessionFree } from '../../../common/decorator/decorator';
 import { UserRole } from '../../user/utils/user.types';
-import { AssignMmeberStoreDto } from '../dto/assign-member.dto';
+import {
+  AssignMmeberStoreDto,
+  DisableMemberStoreDto,
+} from '../dto/assign-member.dto';
 import { StoreAccess } from '../utils/decorators/store.decorator';
 import { StoreRole } from '../utils/store.types';
 import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
@@ -87,19 +88,15 @@ export class StoreController {
 
   @ApiOperation({
     summary: 'Inactivate a store member',
-    description:
-      'Requires the store administrator role.',
+    description: 'Requires the store administrator role.',
   })
   @StoreAccess({
     roles: [StoreRole.ADMIN],
   })
   @UseGuards(StoreAcessRoleGuard)
   @Post(':id/disable')
-  unassignMember(
-    @Param('id') id: string,
-    @Body() data: AssignMmeberStoreDto,
-  ) {
-    return this.storeService.inactiveMember(id, data.userId);
+  unassignMember(@Param('id') id: string, @Body() data: DisableMemberStoreDto) {
+    return this.storeService.inactivateMember(id, data.userId);
   }
 
   @ApiOperation({
@@ -126,12 +123,12 @@ export class StoreController {
   async editStoreMember(
     @Param('id') storeId: string,
     @Param('memberId') memberId: string,
-    @Body() data: UpdateStoreMemberDto
+    @Body() data: UpdateStoreMemberDto,
   ) {
-    await this.storeService.updateMember(memberId, storeId, data)
+    await this.storeService.updateMember(memberId, storeId, data);
     return {
-      message: 'success'
-    }
+      message: 'success',
+    };
   }
 
   @ApiOperation({
@@ -159,10 +156,7 @@ export class StoreController {
     @Query() query: QueryStoreDto,
     @Query() pagination: PaginationDto = new PaginationDto(),
   ) {
-    return this.storeService.findAndCountAll(
-      { queryDto: query },
-      pagination,
-    );
+    return this.storeService.findAndCountAll({ queryDto: query }, pagination);
   }
 
   @ApiOperation({
