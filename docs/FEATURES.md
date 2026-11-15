@@ -317,6 +317,7 @@ the others from being processed.
 | `store`         | Store lifecycle, memberships, selected-store API context, store-scoped catalog/stock/POS/invoice controllers.  |
 | `inventory`     | Items, categories, bundle components, bins, stock-ledger entries, and stock adjustments.                       |
 | `point-of-sale` | POS sessions, session opening/sold quantities, sales invoices and invoice lines.                               |
+| `subscription`  | Per-user subscription packages (`free` / `pro` / `pro_plus`), flexible package rules, and user subscriptions. Controllers are scaffolded under `/api/v1/subscription/*` and `/api/v1/subscriptions` with no HTTP handlers yet. |
 | `health`        | Startup and HTTP health checks for database, Redis, disk, and memory.                                          |
 
 Entity and DTO definitions live next to their owning feature. Service

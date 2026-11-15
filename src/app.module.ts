@@ -16,6 +16,7 @@ import { WinstonConfig } from './common/config/winston.config';
 import { HttpExceptionFilter } from './common/utils/http-exception.filter';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     InventoryModule,
     StoreModule,
     RedisProviderModule,
+    SubscriptionModule,
   ],
   providers: [
     {

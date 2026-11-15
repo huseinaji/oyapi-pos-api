@@ -2,6 +2,7 @@ import { BeforeCreate, BeforeDestroy, BeforeUpdate, Column, DataType, DefaultSco
 import { BaseModel } from '../../../common/base/base-model';
 import { UserRole, UserStatus } from '../utils/user.types';
 import { StoreMember } from '../../store/entities/store-member.entity';
+import { Subscription } from '../../subscription/entities/subscription.entity';
 
 @Table({
   timestamps: true,
@@ -40,7 +41,10 @@ export class User extends BaseModel {
   declare lastLogin: string;
 
   @HasMany(() => StoreMember)
-  declare storeMembers: StoreMember[]
+  declare storeMembers: StoreMember[];
+
+  @HasMany(() => Subscription)
+  declare subscriptions: Subscription[];
 
   @BeforeDestroy
   static async setStatusInactive(instance: User) {
