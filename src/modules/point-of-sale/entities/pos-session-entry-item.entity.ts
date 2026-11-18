@@ -17,7 +17,7 @@ export class PosSessionEntryItem extends BaseModel {
   declare itemId: string;
 
   @BelongsTo(() => Item)
-  declare item: Item
+  declare item: Item;
 
   @Column({
     type: DataType.INTEGER,
@@ -29,7 +29,13 @@ export class PosSessionEntryItem extends BaseModel {
     type: DataType.INTEGER,
     allowNull: true,
   })
-  declare closingQty: number;
+  declare closingQty: number | null;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  declare actualQty: number | null;
 
   @Column({
     type: DataType.INTEGER,
