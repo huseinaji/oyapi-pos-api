@@ -1,9 +1,26 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { ArrayUnique, IsArray, IsOptional, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
-import { CreatePosSessionEntryItemDto } from "../../point-of-sale/dto/create-pos-session-entry-item.dto";
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  ArrayUnique,
+  IsArray,
+  IsInt,
+  IsOptional,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreatePosSessionEntryItemDto } from '../../point-of-sale/dto/create-pos-session-entry-item.dto';
 
 export class CreateStorePosSessionEntryDto {
+  @ApiProperty({
+    type: Number,
+    minimum: 0,
+    description: 'Cash placed in the drawer when opening the POS session.',
+    example: 200000,
+  })
+  @IsInt()
+  @Min(0)
+  openingCash: number;
+
   @ApiProperty({
     required: false,
     isArray: true,
@@ -14,10 +31,9 @@ export class CreateStorePosSessionEntryDto {
   @IsArray()
   @IsOptional()
   @ValidateNested({ each: true })
-  @ArrayUnique(
-    (item: CreatePosSessionEntryItemDto) => item.itemId,
-    { message: 'pos session opening item must be unique' },
-  )
+  @ArrayUnique((item: CreatePosSessionEntryItemDto) => item.itemId, {
+    message: 'pos session opening item must be unique',
+  })
   @Type(() => CreatePosSessionEntryItemDto)
   items: CreatePosSessionEntryItemDto[];
 }

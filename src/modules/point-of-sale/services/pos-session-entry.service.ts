@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { PosSessionEntry } from '../entities/pos-session-entry.entity';
 import { PosSessionEntryStatus } from '../utils/pos.type';
 import { CreatePosSessionEntryItemDto } from '../dto/create-pos-session-entry-item.dto';
+
 import { PosSessionEntryItem } from '../entities/pos-session-entry-item.entity';
 import { Sequelize } from 'sequelize-typescript';
 import { TxOptions } from '../../../common/base/base.service';
@@ -22,7 +23,16 @@ import { Item } from '../../inventory/entities/item.entity';
 import { ItemStatus, ItemType } from '../../inventory/utils/types/item.type';
 import { GET_USER_INCLUDE } from '../../user/utils/user.include';
 import { StockLedgerEntryService } from '../../inventory/services/stock-ledger-entry.service';
-import { LedgerDirection, LedgerReference } from '../../inventory/utils/types/stock-ledger-entry.type';
+import {
+  LedgerDirection,
+  LedgerReference,
+} from '../../inventory/utils/types/stock-ledger-entry.type';
+import { CacheService } from '../../../infrastructure/redis-provider/redis-cache.service';
+import { SalesInvoice } from '../entities/sales-invoice.entity';
+import { PaymentMethod } from '../utils/pos.type';
+import { ClosePosSessionEntryDto } from '../dto/close-pos-session.dto';
+
+const SESSION_TOTALS_CACHE_TTL_SECONDS = 5 * 60;
 
 export type PosSessionStockRequirement = {
   itemId: string;
@@ -40,7 +50,97 @@ export class PosSessionEntryService {
     private readonly binService: BinService,
     private readonly sequelize: Sequelize,
     private readonly stockLedgerEntryService: StockLedgerEntryService,
-  ) { }
+    private readonly cacheService: CacheService,
+    @InjectModel(SalesInvoice)
+    private readonly salesInvoiceModel: typeof SalesInvoice,
+  ) {}
+
+  private sessionTotalsCacheKey(sessionId: string) {
+    return `pos-session:${sessionId}:total-amount`;
+  }
+
+  private async calculateSessionTotals(sessionId: string) {
+    const invoices = (await this.salesInvoiceModel.findAll({
+      attributes: [
+        'paymentMethod',
+        [
+          this.sequelize.fn('SUM', this.sequelize.col('total_amount')),
+          'totalAmount',
+        ],
+      ],
+      where: {
+        posSessionId: sessionId,
+        deletedAt: null,
+      },
+      group: ['paymentMethod'],
+      raw: true,
+    })) as unknown as Array<{
+      paymentMethod: PaymentMethod;
+      totalAmount: string | number;
+    }>;
+
+    const totals = { cash: 0, qris: 0, grandTotal: 0 };
+    for (const invoice of invoices) {
+      const amount = Number(invoice.totalAmount) || 0;
+      if (invoice.paymentMethod === PaymentMethod.CASH) totals.cash = amount;
+      if (invoice.paymentMethod === PaymentMethod.QRIS) totals.qris = amount;
+    }
+    totals.grandTotal = totals.cash + totals.qris;
+    return totals;
+  }
+
+  async getSessionTotals(sessionId: string) {
+    const key = this.sessionTotalsCacheKey(sessionId);
+    let cached = await this.cacheService.getHash(key);
+    if (!cached) {
+      const totals = await this.calculateSessionTotals(sessionId);
+      await this.cacheService.setHash(
+        key,
+        totals,
+        SESSION_TOTALS_CACHE_TTL_SECONDS,
+      );
+      return totals;
+    }
+    const cash = Number(cached.cash) || 0;
+    const qris = Number(cached.qris) || 0;
+    return { cash, qris, grandTotal: cash + qris };
+  }
+
+  async incrementSessionTotal(
+    sessionId: string,
+    paymentMethod: PaymentMethod,
+    amount: number,
+  ) {
+    const key = this.sessionTotalsCacheKey(sessionId);
+    const cached = await this.cacheService.getHash(key);
+    if (!cached) {
+      const totals = await this.calculateSessionTotals(sessionId);
+      totals[paymentMethod] += amount;
+      totals.grandTotal += amount;
+      await this.cacheService.setHash(
+        key,
+        totals,
+        SESSION_TOTALS_CACHE_TTL_SECONDS,
+      );
+      return;
+    }
+    await this.cacheService.incrementHash(
+      key,
+      paymentMethod,
+      amount,
+      SESSION_TOTALS_CACHE_TTL_SECONDS,
+    );
+    await this.cacheService.incrementHash(
+      key,
+      'grandTotal',
+      amount,
+      SESSION_TOTALS_CACHE_TTL_SECONDS,
+    );
+  }
+
+  async invalidateSessionTotals(sessionId: string) {
+    await this.cacheService.del(this.sessionTotalsCacheKey(sessionId));
+  }
 
   async getSessionByStore(storeId: string, options?: TxOptions) {
     return await this.model.findOne({
@@ -48,9 +148,7 @@ export class PosSessionEntryService {
         status: PosSessionEntryStatus.ACTIVE,
         storeId,
       },
-      include: [
-        GET_POSSESSION_ENTRY_ITEM_INCLUDE(),
-      ],
+      include: [GET_POSSESSION_ENTRY_ITEM_INCLUDE()],
       ...options,
     });
   }
@@ -90,7 +188,10 @@ export class PosSessionEntryService {
         );
       }
 
-      await sessionItem.increment('soldQty', { by: requirement.qty, ...options });
+      await sessionItem.increment('soldQty', {
+        by: requirement.qty,
+        ...options,
+      });
     }
   }
 
@@ -101,7 +202,9 @@ export class PosSessionEntryService {
     ancestors = new Set<string>(),
   ): Promise<number> {
     if (ancestors.has(item.id)) {
-      throw new BadRequestException(`Circular item bundle detected for ${item.id}`);
+      throw new BadRequestException(
+        `Circular item bundle detected for ${item.id}`,
+      );
     }
 
     const bundle = await this.itemService.findOne(item.id, options);
@@ -131,12 +234,12 @@ export class PosSessionEntryService {
         const componentOpeningStock =
           componentItem.type === ItemType.ITEM_BUNDLE
             ? await this.getBundleOpeningStock(
-              componentItem,
-              openingStocks,
-              options,
-              nextAncestors,
-            )
-            : openingStocks.get(componentItem.id) ?? 0;
+                componentItem,
+                openingStocks,
+                options,
+                nextAncestors,
+              )
+            : (openingStocks.get(componentItem.id) ?? 0);
 
         return Math.floor(componentOpeningStock / component.qty);
       }),
@@ -145,8 +248,8 @@ export class PosSessionEntryService {
     return Math.min(...availableBundleCounts);
   }
 
-  /** 
-   * opening entry input validation 
+  /**
+   * opening entry input validation
    * return openingstock items
    * */
   async validateOpeningEntryItems(
@@ -180,13 +283,19 @@ export class PosSessionEntryService {
   }
 
   @HandleSequelizeErrors()
-  async create(storeId: string, creator: string, items: CreatePosSessionEntryItemDto[]) {
-    return this.sequelize.transaction(async (t) => {
+  async create(
+    storeId: string,
+    creator: string,
+    openingCash: number,
+    items: CreatePosSessionEntryItemDto[],
+  ) {
+    const entity = await this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
-
       const activeSession = await this.getSessionByStore(storeId, tx);
       if (activeSession) {
-        throw new ConflictException('A POS session is already open for this store');
+        throw new ConflictException(
+          'A POS session is already open for this store',
+        );
       }
 
       const availableItems = await this.itemService.getPosSessionAvailableItem(
@@ -195,15 +304,21 @@ export class PosSessionEntryService {
       );
 
       if (!availableItems.length) {
-        throw new NotFoundException('You have to create an item to open pos session')
+        throw new NotFoundException(
+          'You have to create an item to open pos session',
+        );
       }
 
-      const requestedOpeningStocks = await this.validateOpeningEntryItems(items, availableItems);
+      const requestedOpeningStocks = await this.validateOpeningEntryItems(
+        items,
+        availableItems,
+      );
 
-      const entity = await this.model.create(
+      const itemEntity = await this.model.create(
         {
           storeId,
           createdBy: creator,
+          openingCash,
         },
         tx,
       );
@@ -212,9 +327,12 @@ export class PosSessionEntryService {
       for (const item of availableItems) {
         const openingQty = requestedOpeningStocks.has(item.id)
           ? requestedOpeningStocks.get(item.id)!
-          : item.bin?.actualQty ?? 0;
+          : (item.bin?.actualQty ?? 0);
 
-        if (openingQty > item.bin.actualQty) throw new ConflictException(`Insufficient stock for item '${item.name}'`);
+        if (openingQty > item.bin.actualQty)
+          throw new ConflictException(
+            `Insufficient stock for item '${item.name}'`,
+          );
         await this.binService.updateReservedQty(item.id, openingQty, tx);
 
         openingStocks.set(item.id, openingQty);
@@ -225,7 +343,7 @@ export class PosSessionEntryService {
           itemId: item.id,
           openingQty: openingStocks.get(item.id) ?? 0,
           soldQty: 0,
-          posSessionId: entity.id,
+          posSessionId: itemEntity.id,
         })),
       );
 
@@ -233,8 +351,18 @@ export class PosSessionEntryService {
         await this.posSessionEntryItemModel.bulkCreate(itemRecords, tx);
       }
 
-      return entity;
+      return itemEntity;
     });
+    await this.cacheService.setHash(
+      this.sessionTotalsCacheKey(entity.id),
+      {
+        cash: 0,
+        qris: 0,
+        grandTotal: 0,
+      },
+      SESSION_TOTALS_CACHE_TTL_SECONDS,
+    );
+    return entity;
   }
 
   findAndCountAll(query: QueryPosSessionEntryDto, pagination?: PaginationDto) {
@@ -247,49 +375,97 @@ export class PosSessionEntryService {
         GET_POSSESSION_ENTRY_ITEM_INCLUDE(),
         {
           ...GET_USER_INCLUDE(),
-          as: 'creator'
+          as: 'creator',
         },
         {
           ...GET_USER_INCLUDE(),
-          as: 'closer'
-        }
+          as: 'closer',
+        },
       ],
       ...(pagination?.getPagination() ?? {}),
     });
   }
 
-  async closePos(storeId: string, closedBy: string) {
-    return this.sequelize.transaction(async t => {
+  async closePos(storeId: string, closedBy: string, dto: ClosePosSessionEntryDto) {
+    const sessionId = await this.sequelize.transaction(async (t) => {
       const tx = { transaction: t };
 
       const currentSession = await this.getSessionByStore(storeId);
 
-      if (!currentSession) throw new NotFoundException(`Session not found for storeId ${storeId}`);
+      if (!currentSession)
+        throw new NotFoundException(`Session not found for storeId ${storeId}`);
 
       if (currentSession.status !== PosSessionEntryStatus.ACTIVE) {
         throw new ConflictException('POS session is already closed');
       }
 
+      const totals = await this.getSessionTotals(currentSession.id);
+
+      const closingItems = new Map(
+        dto.items.map((item) => [item.itemId, item.actualQty]),
+      );
+      const sessionItemIds = new Set(
+        currentSession.items.map((item) => item.itemId),
+      );
+      if (
+        closingItems.size !== sessionItemIds.size ||
+        [...closingItems.keys()].some((itemId) => !sessionItemIds.has(itemId))
+      ) {
+        throw new BadRequestException(
+          'Closing items must match all items tracked by the POS session',
+        );
+      }
+
+      const expectedCash = currentSession.openingCash + totals.cash;
+      const cashDiff = dto.actualCash - expectedCash;
+      const stockVariances = currentSession.items.filter((item) => {
+        const actualQty = closingItems.get(item.itemId)!;
+
+        return actualQty !== item.openingQty - item.soldQty;
+      });
+
+      if (
+        (cashDiff !== 0 || stockVariances.length > 0) &&
+        !dto.remarks?.trim()
+      ) {
+        throw new BadRequestException(
+          'Remarks are required when there is a cash or stock variance',
+        );
+      }
+
+      for (const sessionItem of currentSession.items) {
+        sessionItem.closingQty = sessionItem.openingQty - sessionItem.soldQty;
+        sessionItem.actualQty = closingItems.get(sessionItem.itemId)!;
+        await sessionItem.save(tx);
+      }
+
       await Promise.all(
-        currentSession.items.map(async m => {
+        currentSession.items.map(async (m) => {
           if (m.soldQty === 0) return;
-          await this.stockLedgerEntryService.create({
-            createDto: {
-              itemId: m.itemId,
-              qty: m.soldQty,
-              ledgerDirection: LedgerDirection.OUT,
-              storeId,
-              reference: LedgerReference.POS_SESSION,
-              referenceId: currentSession.id
-            }
-          }, tx);
-        })
-      )
+          await this.stockLedgerEntryService.create(
+            {
+              createDto: {
+                itemId: m.itemId,
+                qty: m.soldQty,
+                ledgerDirection: LedgerDirection.OUT,
+                storeId,
+                reference: LedgerReference.POS_SESSION,
+                referenceId: currentSession.id,
+              },
+            },
+            tx,
+          );
+        }),
+      );
+      currentSession.actualCash = dto.actualCash;
+      currentSession.remarks = dto.remarks ?? null;
       currentSession.closedBy = closedBy;
       currentSession.status = PosSessionEntryStatus.CLOSED;
       currentSession.closedAt = new Date().toISOString();
 
       await currentSession.save(tx);
-    })
+      return currentSession.id;
+    });
+    await this.invalidateSessionTotals(sessionId);
   }
 }

@@ -12,9 +12,9 @@ import { ApiOperation, ApiParam } from '@nestjs/swagger';
 import { QuerySalesInvoiceDto } from '../../point-of-sale/dto/query-sales-invoice.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import type { FastifyRequest } from 'fastify';
-import { StoreContextGuard } from '../guards/store-context/store-context.guard';
+import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
 
-@UseGuards(StoreContextGuard)
+@UseGuards(StoreAcessRoleGuard)
 @Controller({ path: 'store/:id/invoice', version: '1' })
 export class StoreInvoiceController {
   constructor(private salesInvoiceService: SalesInvoiceService) {}
@@ -46,7 +46,7 @@ export class StoreInvoiceController {
     @Query() pagination: PaginationDto,
     @Req() req: FastifyRequest,
   ) {
-    return this.salesInvoiceService.findAndCountAll({ 
+    return this.salesInvoiceService.findAndCountAll({
       queryDto: {
         ...query,
         storeId: req.storeSession.storeId,

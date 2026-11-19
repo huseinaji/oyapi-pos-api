@@ -19,29 +19,31 @@ import { UpdateItemDto } from '../../inventory/dto/items/update-item.dto';
 import { ItemCategoryService } from '../../inventory/services/item-category.service';
 import { CreateStoreItemDto } from '../dto/createStoreItem.dto';
 import { CreateStoreItemCategoryDto } from '../dto/create-store-itemcategory.dto';
-import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 import { ItemBundleComponentService } from '../../inventory/services/item-bundle-component.service';
 import { CreateItemBundleComponentDto } from '../../inventory/dto/item-bundle-component/create-item-bundle-component.dto';
 import { StoreAccess } from '../utils/decorators/store.decorator';
 import { StoreRole } from '../utils/store.types';
 import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
 
-@UseGuards(StoreContextGuard)
+@UseGuards(StoreAcessRoleGuard)
 @Controller({ path: 'store/:id/items', version: '1' })
 export class StoreItemController {
   constructor(
     private readonly itemService: ItemService,
     private readonly itemCategoryService: ItemCategoryService,
     private readonly itemBundleComponentService: ItemBundleComponentService,
-  ) { }
+  ) {}
 
-  @ApiOperation({ summary: 'Create a store item', description: 'Creates an item in the specified store from the submitted item details.' })
+  @ApiOperation({
+    summary: 'Create a store item',
+    description:
+      'Creates an item in the specified store from the submitted item details.',
+  })
   @ApiParam({
     name: 'id',
     description: 'ID of the store that will own the item.',
   })
   @StoreAccess({ roles: [StoreRole.ADMIN] })
-  @UseGuards(StoreAcessRoleGuard)
   @Post()
   create(@Body() data: CreateStoreItemDto, @Req() req: FastifyRequest) {
     const user = req.user;
@@ -55,11 +57,11 @@ export class StoreItemController {
     );
   }
 
-  @ApiOperation({ summary: 'Create an item category', description: 'Creates a category in the specified store.' })
-  @StoreAccess({
-    roles: [StoreRole.ADMIN]
+  @ApiOperation({
+    summary: 'Create an item category',
+    description: 'Creates a category in the specified store.',
   })
-  @UseGuards(StoreAcessRoleGuard)
+  @StoreAccess({ roles: [StoreRole.ADMIN] })
   @ApiParam({
     name: 'id',
     description: 'ID of the store that will own the category.',
@@ -77,7 +79,11 @@ export class StoreItemController {
     });
   }
 
-  @ApiOperation({ summary: 'List item categories', description: 'Returns the item categories for the specified store using the supplied pagination settings.' })
+  @ApiOperation({
+    summary: 'List item categories',
+    description:
+      'Returns the item categories for the specified store using the supplied pagination settings.',
+  })
   @ApiParam({
     name: 'id',
     description: 'ID of the store whose categories are requested.',
@@ -93,11 +99,11 @@ export class StoreItemController {
     );
   }
 
-  @ApiOperation({ summary: 'Delete an item category', description: 'Deletes the category identified by categoryId.' })
-  @StoreAccess({
-    roles: [StoreRole.ADMIN]
+  @ApiOperation({
+    summary: 'Delete an item category',
+    description: 'Deletes the category identified by categoryId.',
   })
-  @UseGuards(StoreAcessRoleGuard)
+  @StoreAccess({ roles: [StoreRole.ADMIN] })
   @ApiParam({
     name: 'id',
     description: 'ID of the store that owns the category.',
@@ -113,7 +119,11 @@ export class StoreItemController {
     };
   }
 
-  @ApiOperation({ summary: 'List store items', description: 'Returns items matching the supplied filters and pagination settings for the specified store.' })
+  @ApiOperation({
+    summary: 'List store items',
+    description:
+      'Returns items matching the supplied filters and pagination settings for the specified store.',
+  })
   @ApiParam({
     name: 'id',
     description: 'ID of the store whose items are requested.',
@@ -133,7 +143,10 @@ export class StoreItemController {
     );
   }
 
-  @ApiOperation({ summary: 'Get a store item', description: 'Returns the item identified by itemId.' })
+  @ApiOperation({
+    summary: 'Get a store item',
+    description: 'Returns the item identified by itemId.',
+  })
   @ApiParam({
     name: 'id',
     description: 'ID of the store that owns the item.',
@@ -143,11 +156,12 @@ export class StoreItemController {
     return this.itemService.findOneForStore(itemId, storeId);
   }
 
-  @ApiOperation({ summary: 'Update a store item', description: 'Updates the supplied fields for the item identified by itemId.' })
-  @StoreAccess({
-    roles: [StoreRole.ADMIN]
+  @ApiOperation({
+    summary: 'Update a store item',
+    description:
+      'Updates the supplied fields for the item identified by itemId.',
   })
-  @UseGuards(StoreAcessRoleGuard)
+  @StoreAccess({ roles: [StoreRole.ADMIN] })
   @ApiParam({
     name: 'id',
     description: 'ID of the store that owns the item.',
@@ -161,20 +175,17 @@ export class StoreItemController {
     return this.itemService.updateForStore(itemId, storeId, data);
   }
 
-  @ApiOperation({ summary: 'Delete a store item', description: 'Deletes the item identified by itemId.' })
-  @StoreAccess({
-    roles: [StoreRole.ADMIN]
+  @ApiOperation({
+    summary: 'Delete a store item',
+    description: 'Deletes the item identified by itemId.',
   })
-  @UseGuards(StoreAcessRoleGuard)
+  @StoreAccess({ roles: [StoreRole.ADMIN] })
   @ApiParam({
     name: 'id',
     description: 'ID of the store that owns the item.',
   })
   @Delete(':itemId')
-  async remove(
-    @Param('id') storeId: string,
-    @Param('itemId') itemId: string,
-  ) {
+  async remove(@Param('id') storeId: string, @Param('itemId') itemId: string) {
     await this.itemService.removeForStore(itemId, storeId);
 
     return {
@@ -182,12 +193,17 @@ export class StoreItemController {
     };
   }
 
-  @ApiOperation({ summary: 'Add a bundle component', description: 'Adds the submitted item as a component of the specified bundle item.' })
+  @ApiOperation({
+    summary: 'Add a bundle component',
+    description:
+      'Adds the submitted item as a component of the specified bundle item.',
+  })
   @Post(':itemId/component')
+  @StoreAccess({ roles: [StoreRole.ADMIN] })
   updateComponentItem(
     @Param('id') storeId: string,
     @Param('itemId') itemId: string,
-    @Body() data: CreateItemBundleComponentDto
+    @Body() data: CreateItemBundleComponentDto,
   ) {
     return this.itemBundleComponentService.create(data, itemId, storeId);
   }

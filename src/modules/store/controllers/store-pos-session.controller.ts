@@ -8,7 +8,6 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { StoreContextGuard } from '../guards/store-context/store-context.guard';
 import { ApiOperation, ApiParam } from '@nestjs/swagger';
 import { PosSessionEntryService } from '../../point-of-sale/services/pos-session-entry.service';
 import type { FastifyRequest } from 'fastify';
@@ -16,9 +15,10 @@ import { UserAuthPayload } from '../../auth/utils/auth.type';
 import { CreateStorePosSessionEntryDto } from '../dto/create-pos-session-entry.dto';
 import { QueryPosSessionEntryDto } from '../../point-of-sale/dto/query-pos-session-entry.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
-import { PosSessionGuard } from '../guards/pos-session/pos-session.guard';
+import { StoreAcessRoleGuard } from '../guards/store-acess-role/store-acess-role.guard';
+import { ClosePosSessionEntryDto } from '../../point-of-sale/dto/close-pos-session.dto';
 
-@UseGuards(StoreContextGuard)
+@UseGuards(StoreAcessRoleGuard)
 @Controller({ path: 'store/:id/pos-session', version: '1' })
 export class StorePosSessionController {
   constructor(private posSessionService: PosSessionEntryService) { }
@@ -37,6 +37,7 @@ export class StorePosSessionController {
     return this.posSessionService.create(
       req.storeSession.storeId,
       user.sub,
+      data.openingCash,
       data.items,
     );
   }
@@ -71,12 +72,18 @@ export class StorePosSessionController {
     name: 'id',
     description: 'ID of the store whose active POS session will be closed.',
   })
-  @UseGuards(PosSessionGuard)
   @Delete()
-  async closeSession(@Req() req: FastifyRequest) {
+  async closeSession(
+    @Body() data: ClosePosSessionEntryDto,
+    @Req() req: FastifyRequest,
+  ) {
     const user: UserAuthPayload = req.session.payload.userPayload;
 
-    await this.posSessionService.closePos(req.storeSession.storeId, user.sub);
+    await this.posSessionService.closePos(
+      req.storeSession.storeId,
+      user.sub,
+      data,
+    );
     return {
       message: 'success',
     };

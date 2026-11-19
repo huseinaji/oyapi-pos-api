@@ -40,5 +40,26 @@ export class CacheService {
   async decrement(key: string, value = 1) {
     return await this.client.decrby(key, value);
   }
+
+  async incrementHash(key: string, field: string, value: number, ttl?: number) {
+    const result = await this.client.hincrbyfloat(key, field, value);
+    if (ttl !== undefined) {
+      await this.client.expire(key, ttl);
+    }
+    return result;
+  }
+
+  async setHash(key: string, values: Record<string, number>, ttl?: number) {
+    const result = await this.client.hset(key, values);
+    if (ttl !== undefined) {
+      await this.client.expire(key, ttl);
+    }
+    return result;
+  }
+
+  async getHash(key: string): Promise<Record<string, string> | null> {
+    const value = await this.client.hgetall(key);
+    return Object.keys(value).length ? value : null;
+  }
 }
 

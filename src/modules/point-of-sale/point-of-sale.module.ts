@@ -9,6 +9,7 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { PosSessionEntryService } from './services/pos-session-entry.service';
 import { PosSessionEntry } from './entities/pos-session-entry.entity';
 import { PosSessionEntryItem } from './entities/pos-session-entry-item.entity';
+import { RedisProviderModule } from '../../infrastructure/redis-provider/redis-provider.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PosSessionEntryItem } from './entities/pos-session-entry-item.entity';
       PosSessionEntryItem,
     ]),
     InventoryModule,
+    RedisProviderModule,
   ],
   providers: [
     SalesInvoiceService,

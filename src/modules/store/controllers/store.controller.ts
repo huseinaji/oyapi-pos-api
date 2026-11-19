@@ -30,6 +30,7 @@ import { UpdateStoreDto } from '../dto/update-store.dto';
 import type { FastifySessionObject } from '@fastify/session';
 import type { FastifyRequest } from 'fastify';
 import { UpdateStoreMemberDto } from '../dto/store-member-dto/update-store-member.dto';
+import { BaseStoreMemberDto } from '../dto/store-member-dto/base-store-member.dto';
 
 @SessionFree()
 @Controller({ path: 'store', version: '1' })
@@ -54,21 +55,20 @@ export class StoreController {
     description:
       'Selects a store for the current session and sets it as the active store.',
   })
+  @UseGuards(StoreAcessRoleGuard)
   @Post(':id/select')
   async selectStore(
     @Param('id') id: string,
     @Session() session: FastifySessionObject,
     @Req() req: FastifyRequest,
   ) {
-    const user = req['user'] as BaseSessionPayload;
+    const storeMember = req['storeMember'] as BaseStoreMemberDto;
 
-    const payload = await this.storeService.selectStore(id, user.userPayload);
-
-    session.payload.userPayload.store = { storeId: id, role: payload.role };
+    session.payload.userPayload.store = { storeId: id, role: storeMember.role };
 
     return {
       success: true,
-      data: payload,
+      storeMember
     };
   }
 

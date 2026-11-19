@@ -16,7 +16,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { GET_ENV_VARIABLE } from '../../common/utils';
 import { StoreMember } from './entities/store-member.entity';
-import { StoreMemberStatus, StoreRole, StoreStatus } from './utils/store.types';
+import { StoreMemberStatus, StoreRole } from './utils/store.types';
 import { Sequelize } from 'sequelize-typescript';
 import { CreateStoreDto } from './dto/store-dto/create-store.dto';
 import type { UserAuthPayload } from '../auth/utils/auth.type';
@@ -180,19 +180,6 @@ export class StoreService extends BaseService<Store> {
     });
   }
 
-  async selectStore(id: string, user: UserAuthPayload) {
-    const storeData = await this.findOne(id);
-    const userMember = await this.getMemberData(id, user.sub);
-
-    if (!userMember)
-      throw new NotFoundException('You are not member of this store');
-
-    return {
-      store: storeData.get({ plain: true }),
-      role: userMember.role,
-    };
-  }
-
   getMyStore(userContext: UserAuthPayload, pagination?: PaginationDto) {
     return this.model.findAndCountAll({
       include: [
@@ -248,35 +235,5 @@ export class StoreService extends BaseService<Store> {
       ...(pagination?.getPagination() ?? {}),
       ...options,
     });
-  }
-
-  private async autocloseSession() {
-    const storeData = await this.model.findAll({
-      where: {
-        status: StoreStatus.ACTIVE,
-      },
-    });
-
-    const results = await Promise.allSettled(
-      storeData.map((store) =>
-        this.posSessionService.closePos(
-          store.id,
-          GET_ENV_VARIABLE('INITIAL_USER_ID'),
-        ),
-      ),
-    );
-
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        this.logger.warn(
-          `Failed to auto-close POS session ${storeData[index].id}: ${result.reason}`,
-        );
-      }
-    });
-  }
-
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { timeZone: 'Asia/Jakarta' })
-  protected async cronMidnight() {
-    await this.autocloseSession();
   }
 }
