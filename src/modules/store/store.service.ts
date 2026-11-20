@@ -173,7 +173,7 @@ export class StoreService extends BaseService<Store> {
           ...GET_USER_INCLUDE(),
           required: true,
           where: {
-            userId: { [Op.ne]: GET_ENV_VARIABLE('INITIAL_USER_ID') },
+            role: { [Op.ne]: UserRole.ADMIN },
           },
         },
       ],
